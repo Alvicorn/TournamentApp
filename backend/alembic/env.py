@@ -1,9 +1,9 @@
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context  # type: ignore[attr-defined]
-from app.config import get_settings
 from app.models import Base
 
 config = context.config
@@ -11,7 +11,12 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+# DATABASE_URL is only used by Alembic for migrations; the app itself connects
+# via the Supabase client (SUPABASE_URL + SUPABASE_KEY).
+database_url = os.environ.get("DATABASE_URL", "")
+if not database_url:
+    raise RuntimeError("DATABASE_URL env var required for Alembic migrations")
+config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = Base.metadata
 

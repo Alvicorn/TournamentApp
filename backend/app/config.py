@@ -9,11 +9,12 @@ class Settings(BaseSettings):
 
     environment: str = "development"
 
-    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/tournament"
+    supabase_url: str = ""
+    supabase_key: str = ""
+
     redis_url: str = "redis://localhost:6379/0"
 
     supabase_jwks_url: str = ""
-    supabase_project_url: str = ""
     supabase_audience: str = "authenticated"
 
     judge_jwt_secret: str = "change-me-in-prod"

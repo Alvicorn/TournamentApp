@@ -42,6 +42,8 @@ jobs:
           REDIS_URL: "redis://localhost:6379/0"
           JUDGE_JWT_SECRET: "test-secret"
           ADMIN_EMAIL_ALLOWLIST: "admin@test.com"
+          SUPABASE_URL: "https://placeholder.supabase.co"
+          SUPABASE_KEY: "placeholder-key"
 
     services:
       postgres:
@@ -89,10 +91,10 @@ jobs:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build --platform linux/x86_64 -t $ECR_REGISTRY/tournament-api:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/tournament-api:$IMAGE_TAG
-          docker tag $ECR_REGISTRY/tournament-api:$IMAGE_TAG $ECR_REGISTRY/tournament-api:latest
-          docker push $ECR_REGISTRY/tournament-api:latest
+          docker build --platform linux/x86_64 -t $ECR_REGISTRY/tournament_app:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/tournament_app:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/tournament_app:$IMAGE_TAG $ECR_REGISTRY/tournament_app:latest
+          docker push $ECR_REGISTRY/tournament_app:latest
 
       - name: Deploy to ECS Express Mode
         env:
@@ -103,5 +105,5 @@ jobs:
         run: |
           aws ecs update-express-gateway-service \
             --service-arn $ECS_EXPRESS_SERVICE_ARN \
-            --primary-container "{\"image\":\"$ECR_REGISTRY/tournament-api:$IMAGE_TAG\"}" \
+            --primary-container "image=$ECR_REGISTRY/tournament_app:latest" \
             --region $AWS_REGION
