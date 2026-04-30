@@ -1,0 +1,6 @@
+aws_region                  = "us-west-2"
+vpc_id                      = "vpc-xxxxxxxxxxxxxxxxx"
+subnet_id                   = "subnet-xxxxxxxxxxxxxxxxx"
+apprunner_security_group_id = "sg-xxxxxxxxxxxxxxxxx"
+redis_password              = "CHANGE_ME"
+alarm_sns_topic_arn         = "arn:aws:sns:us-west-2:123456789012:tournament-alerts"
