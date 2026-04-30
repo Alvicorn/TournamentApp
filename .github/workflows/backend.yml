@@ -103,5 +103,5 @@ jobs:
         run: |
           aws ecs update-express-gateway-service \
             --service-arn $ECS_EXPRESS_SERVICE_ARN \
-            --primary-container "image=$ECR_REGISTRY/tournament_app:$IMAGE_TAG" \
+            --primary-container "image=$ECR_REGISTRY/tournament_app:$latest" \
             --region $AWS_REGION
