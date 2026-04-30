@@ -16,15 +16,15 @@ provider "aws" {
 
 resource "aws_security_group" "redis" {
   name        = "redis-sg"
-  description = "Redis EC2: allow 6379 from App Runner VPC connector only"
+  description = "Redis EC2: allow 6379 from ECS Fargate tasks only"
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "Redis from App Runner"
+    description     = "Redis from Fargate tasks"
     from_port       = 6379
     to_port         = 6379
     protocol        = "tcp"
-    security_groups = [var.apprunner_security_group_id]
+    security_groups = [var.fargate_task_security_group_id]
   }
 
   egress {

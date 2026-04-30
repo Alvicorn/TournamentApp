@@ -89,16 +89,19 @@ jobs:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build --platform linux/arm64 -t $ECR_REGISTRY/tournament-api:$IMAGE_TAG .
+          docker build --platform linux/x86_64 -t $ECR_REGISTRY/tournament-api:$IMAGE_TAG .
           docker push $ECR_REGISTRY/tournament-api:$IMAGE_TAG
           docker tag $ECR_REGISTRY/tournament-api:$IMAGE_TAG $ECR_REGISTRY/tournament-api:latest
           docker push $ECR_REGISTRY/tournament-api:latest
 
-      - name: Deploy to App Runner
+      - name: Deploy to ECS Express Mode
         env:
-          APP_RUNNER_SERVICE_ARN: ${{ secrets.APP_RUNNER_SERVICE_ARN }}
+          ECS_EXPRESS_SERVICE_ARN: ${{ secrets.ECS_EXPRESS_SERVICE_ARN }}
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ github.sha }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
-          aws apprunner start-deployment \
-            --service-arn $APP_RUNNER_SERVICE_ARN \
+          aws ecs update-express-gateway-service \
+            --service-arn $ECS_EXPRESS_SERVICE_ARN \
+            --primary-container "{\"image\":\"$ECR_REGISTRY/tournament-api:$IMAGE_TAG\"}" \
             --region $AWS_REGION

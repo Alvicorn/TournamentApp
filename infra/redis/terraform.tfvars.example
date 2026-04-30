@@ -1,6 +1,8 @@
-aws_region                  = "us-west-2"
-vpc_id                      = "vpc-xxxxxxxxxxxxxxxxx"
-subnet_id                   = "subnet-xxxxxxxxxxxxxxxxx"
-apprunner_security_group_id = "sg-xxxxxxxxxxxxxxxxx"
-redis_password              = "CHANGE_ME"
-alarm_sns_topic_arn         = "arn:aws:sns:us-west-2:123456789012:tournament-alerts"
+aws_region                     = "us-west-2"
+vpc_id                         = "vpc-xxxxxxxxxxxxxxxxx"
+subnet_id                      = "subnet-xxxxxxxxxxxxxxxxx"
+fargate_task_security_group_id = "sg-xxxxxxxxxxxxxxxxx"  # SG auto-created by ECS Express Mode for Fargate tasks
+alb_arn_suffix                 = "app/tourney-api/xxxxxxxxxxxxxxxxx"  # portion after 'loadbalancer/' in ALB ARN
+target_group_arn_suffix        = "targetgroup/tourney-api/xxxxxxxxxxxxxxxxx"  # portion after 'targetgroup/' in TG ARN
+redis_password                 = "CHANGE_ME"
+alarm_sns_topic_arn            = "arn:aws:sns:us-west-2:123456789012:tournament-alerts"
