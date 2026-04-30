@@ -5,7 +5,7 @@ variable "aws_region" {
 }
 
 variable "vpc_id" {
-  description = "VPC that the Redis EC2 and App Runner VPC connector will live in"
+  description = "VPC that the Redis EC2 and Fargate tasks share"
   type        = string
 }
 
@@ -14,8 +14,18 @@ variable "subnet_id" {
   type        = string
 }
 
-variable "apprunner_security_group_id" {
-  description = "Security group attached to the App Runner VPC connector"
+variable "fargate_task_security_group_id" {
+  description = "Security group auto-created by ECS Express Mode for Fargate tasks"
+  type        = string
+}
+
+variable "alb_arn_suffix" {
+  description = "ALB ARN suffix provisioned by ECS Express Mode (portion after 'loadbalancer/', e.g. 'app/tourney-api/abc123')"
+  type        = string
+}
+
+variable "target_group_arn_suffix" {
+  description = "Target group ARN suffix provisioned by ECS Express Mode (portion after 'targetgroup/', e.g. 'targetgroup/tourney-api/abc123')"
   type        = string
 }
 

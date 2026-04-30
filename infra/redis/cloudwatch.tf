@@ -56,17 +56,40 @@ resource "aws_cloudwatch_metric_alarm" "redis_cpu_credits" {
   ok_actions    = [var.alarm_sns_topic_arn]
 }
 
-# App Runner 5xx rate (backend errors)
-resource "aws_cloudwatch_metric_alarm" "apprunner_5xx" {
-  alarm_name          = "apprunner-5xx-rate"
-  alarm_description   = "App Runner 5xx error rate > 5% over 5 minutes"
-  namespace           = "AWS/AppRunner"
-  metric_name         = "5XXErrors"
+# ALB 5xx rate (backend errors surfaced at the load balancer)
+resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
+  alarm_name          = "alb-5xx-rate"
+  alarm_description   = "ALB 5xx error rate > 5% over 5 minutes"
+  namespace           = "AWS/ApplicationELB"
+  metric_name         = "HTTPCode_Target_5XX_Count"
+  dimensions          = { LoadBalancer = var.alb_arn_suffix }
   period              = 300
   evaluation_periods  = 1
   statistic           = "Sum"
   threshold           = 50
   comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+
+  alarm_actions = [var.alarm_sns_topic_arn]
+  ok_actions    = [var.alarm_sns_topic_arn]
+}
+
+# ECS unhealthy tasks (ALB target group health check failures)
+resource "aws_cloudwatch_metric_alarm" "ecs_unhealthy_tasks" {
+  alarm_name          = "ecs-unhealthy-tasks"
+  alarm_description   = "ECS Fargate task health check failing — service may be down"
+  namespace           = "AWS/ApplicationELB"
+  metric_name         = "UnHealthyHostCount"
+  dimensions = {
+    LoadBalancer = var.alb_arn_suffix
+    TargetGroup  = var.target_group_arn_suffix
+  }
+  period              = 60
+  evaluation_periods  = 2
+  statistic           = "Maximum"
+  threshold           = 0
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
 
   alarm_actions = [var.alarm_sns_topic_arn]
   ok_actions    = [var.alarm_sns_topic_arn]
