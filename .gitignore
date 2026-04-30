@@ -12,20 +12,17 @@ venv/
 node_modules/
 dist/
 .vite/
-
+frontend/tsconfig.tsbuildinfo
 # Env
 .env*/**
+.env.*
 .env
 .env.local
 *.local
-
+git
 # OS
 .DS_Store
 Thumbs.db
-
-# Editor
-.idea/
-.vscode/
 
 # Terraform
 .terraform/
@@ -37,3 +34,5 @@ Thumbs.db
 # Build artifacts
 build/
 *.log
+
+.claude/worktrees

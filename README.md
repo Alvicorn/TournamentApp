@@ -17,7 +17,7 @@ docs/       Source of truth — read this first
 ### Backend
 ```bash
 cd backend
-uv sync
+uv sync --extra dev
 uv run uvicorn app.main:app --reload
 ```
 
