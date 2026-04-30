@@ -47,3 +47,12 @@ bdd_features_base_dir = "tests/features"
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
+
+# Fix Alembic dynamic imports / op module issues
+[[tool.mypy.overrides]]
+module = "alembic"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "alembic.*"
+ignore_missing_imports = true
