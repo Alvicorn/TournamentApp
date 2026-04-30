@@ -12,7 +12,7 @@ venv/
 node_modules/
 dist/
 .vite/
-
+frontend/tsconfig.tsbuildinfo
 # Env
 .env*/**
 .env.*
