@@ -42,6 +42,8 @@ jobs:
           REDIS_URL: "redis://localhost:6379/0"
           JUDGE_JWT_SECRET: "test-secret"
           ADMIN_EMAIL_ALLOWLIST: "admin@test.com"
+          SUPABASE_URL: "https://placeholder.supabase.co"
+          SUPABASE_KEY: "placeholder-key"
 
     services:
       postgres:
@@ -103,5 +105,5 @@ jobs:
         run: |
           aws ecs update-express-gateway-service \
             --service-arn $ECS_EXPRESS_SERVICE_ARN \
-            --primary-container "image=$ECR_REGISTRY/tournament_app:$latest" \
+            --primary-container "image=$ECR_REGISTRY/tournament_app:latest" \
             --region $AWS_REGION

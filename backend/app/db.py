@@ -1,24 +1,7 @@
-from collections.abc import Iterator
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from supabase import Client, create_client
 
 from app.config import get_settings
 
 _settings = get_settings()
 
-engine = create_engine(
-    _settings.database_url,
-    pool_pre_ping=True,
-    future=True,
-)
-
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
-
-
-def get_db() -> Iterator[Session]:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+supabase: Client = create_client(_settings.supabase_url, _settings.supabase_key)

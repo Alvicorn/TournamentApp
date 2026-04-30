@@ -33,13 +33,13 @@ def is_admin_email(email: str) -> bool:
 
 def login_with_password(email: str, password: str) -> dict[Any, Any] | Any:
     settings = get_settings()
-    if not settings.supabase_project_url:
-        raise RuntimeError("SUPABASE_PROJECT_URL is not configured")
-    url = f"{settings.supabase_project_url}/auth/v1/token?grant_type=password"
+    if not settings.supabase_url:
+        raise RuntimeError("SUPABASE_URL is not configured")
+    url = f"{settings.supabase_url}/auth/v1/token?grant_type=password"
     response = httpx.post(
         url,
         json={"email": email, "password": password},
-        headers={"apikey": settings.supabase_audience},
+        headers={"apikey": settings.supabase_key},
         timeout=10.0,
     )
     response.raise_for_status()
