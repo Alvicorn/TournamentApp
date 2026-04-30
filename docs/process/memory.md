@@ -4,6 +4,13 @@ Append-only log of decisions made, gotchas discovered, and things that are easy 
 
 ## Decisions
 
+### 2026-04 — Round 4: Swapped App Runner → ECS Express Mode
+
+- **Backend hosting**: Migrated from App Runner to **Amazon ECS Express Mode** (Fargate-based, launched Nov 2025). Same operational properties (rolling deploys, no OS patching, auto-scaling, CloudWatch logs) but ~30% cheaper (~$22–32/mo vs. $32–45/mo) and VPC-native (direct intra-VPC connection to Redis EC2, no VPC connector needed).
+- **Trade-off accepted**: ECS Express Mode does not currently support blue-green deployments — rolling deploys only. Acceptable for MVP; can migrate to standard ECS API later without changing the underlying service.
+- **Custom domain**: `api.tourney.com` is wired via Route 53 A-record alias to the ALB that Express Mode auto-provisions (ACM cert attached directly to ALB listener).
+- **Architecture diagram updated** in `engineering/architecture.md` and full deployment doc in `infra/deployment.md`.
+
 ### 2026-04 — Round 3 of refinements
 
 - **BDD adoption**: Hybrid. Gherkin (`pytest-bdd`) for tournament rules / scoring / brackets / standings. Plain pytest for everything else.

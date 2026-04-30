@@ -6,18 +6,18 @@ Each phase ends with something demoable. Don't skip phase 1's deploy step — se
 
 ### Phase 1 — Foundations
 
-- [x] Repo scaffolding (frontend + backend; consider monorepo with pnpm/uv workspaces)
-- [x] Supabase project, Alembic migrations
-- [x] FastAPI app: health check, JWT helpers, Supabase Auth integration
-- [x] `/health/redis` endpoint
-- [x] Redis EC2 provisioning via Terraform (with hardening: `restart: always`, systemd, EC2 auto-recovery)
-- [x] CloudWatch alarms (App Runner 5xx, EC2 status checks, CPU credits, Redis health)
-- [x] React app: router, Zustand store skeleton, role-based auth shells
-- [x] Connection status indicator wired up
-- [x] `pytest-bdd` set up with first feature file as proof-of-concept
-- [x] Deploy pipeline to AWS (even if it just serves "hello world") — *do this early, not at the end*
-- [x] Soft-delete utility / mixin for SQLAlchemy models
-- [x] Postgres clock convention enforced via SQLAlchemy `server_default` lint rule
+- [ ] Repo scaffolding (frontend + backend; consider monorepo with pnpm/uv workspaces)
+- [ ] Supabase project, Alembic migrations
+- [ ] FastAPI app: health check, JWT helpers, Supabase Auth integration
+- [ ] `/health/redis` endpoint
+- [ ] Redis EC2 provisioning via Terraform (with hardening: `restart: always`, systemd, EC2 auto-recovery)
+- [ ] CloudWatch alarms (ALB 5xx, ECS unhealthy tasks, EC2 status checks, CPU credits, Redis health)
+- [ ] React app: router, Zustand store skeleton, role-based auth shells
+- [ ] Connection status indicator wired up
+- [ ] `pytest-bdd` set up with first feature file as proof-of-concept
+- [ ] Deploy pipeline to AWS (even if it just serves "hello world") — *do this early, not at the end*
+- [ ] Soft-delete utility / mixin for SQLAlchemy models
+- [ ] Postgres clock convention enforced via SQLAlchemy `server_default` lint rule
 
 ### Phase 2 — Admin core
 

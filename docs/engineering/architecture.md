@@ -12,12 +12,14 @@
    │      │
    │      └────► CloudFront ────► S3 (React static build)
    │
-   └─ api.tourney.com ──► AWS App Runner (FastAPI container)
+   └─ api.tourney.com ──► ALB (provisioned by ECS Express Mode)
                           │
-                          ├─► EC2 t4g.nano (Redis container, hardened)  [SSE pub/sub fan-out]
-                          │      via VPC connector
-                          │
-                          └─► Supabase Postgres (external)
+                          └─► Fargate task: FastAPI container
+                                 │
+                                 ├─► EC2 t4g.nano (Redis container, hardened)  [SSE pub/sub fan-out]
+                                 │      same VPC
+                                 │
+                                 └─► Supabase Postgres (external)
 ```
 
 **Data flow**: `React → FastAPI → SQLAlchemy → Supabase Postgres`. Frontend never talks to Supabase directly.
@@ -60,7 +62,7 @@ Trade-off: we lose Supabase Realtime out-of-the-box, hence the Redis pub/sub sol
 | Component | Tech | Where it lives |
 |---|---|---|
 | Web app | React + TS + Tailwind + Zustand | S3 + CloudFront |
-| API | FastAPI + SQLAlchemy + Alembic | App Runner |
+| API | FastAPI + SQLAlchemy + Alembic | ECS Express Mode (Fargate) |
 | Database | Postgres | Supabase (external) |
 | Auth (admin) | Supabase Auth | Supabase (external) |
 | Realtime fan-out | Redis pub/sub | EC2 t4g.nano (hardened) |

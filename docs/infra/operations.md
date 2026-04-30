@@ -40,13 +40,16 @@ Reasoning: restoring is destructive (overwrites everything since the snapshot). 
 We deliberately keep monitoring KISS — CloudWatch logs only, no Sentry, no UptimeRobot.
 
 ### What we watch via CloudWatch
-- App Runner logs (auto-aggregated).
+- ECS Express Mode service logs (auto-aggregated by Express Mode).
+- Fargate task health and replacement events.
+- ALB request metrics (5xx rate, latency, target health).
 - EC2 (Redis) status checks.
 - EC2 CPU credit balance (t4g.nano is burstable; running out = degraded).
 - Custom metric: `redis_health_check_failures` (incremented when `/health/redis` fails).
 
 ### Alarms (route to admin email via SNS)
-- App Runner: 5xx rate > 5% over 5 minutes.
+- ALB target group: 5xx rate > 5% over 5 minutes.
+- ECS service: unhealthy task count > 0 for >2 minutes.
 - EC2: `StatusCheckFailed_System` for >2 minutes → triggers auto-recovery.
 - EC2: `StatusCheckFailed_Instance` for >2 minutes → email alert (manual intervention needed).
 - EC2: CPU credit balance < 20 → email alert (degradation imminent).
@@ -93,7 +96,7 @@ Rate limits applied at the FastAPI level using `slowapi` or similar. Per-IP buck
 Run the morning of every tournament. **All steps must pass.**
 
 ### Infrastructure
-- [ ] App Runner service is `Running` in AWS console.
+- [ ] ECS Express Mode service is `ACTIVE` in AWS console (or via `aws ecs describe-express-gateway-service`).
 - [ ] Redis EC2 is `running` with `2/2 status checks passed`.
 - [ ] Supabase project status: green.
 - [ ] No active CloudWatch alarms.
@@ -134,15 +137,15 @@ Run the morning of every tournament. **All steps must pass.**
 **Common fixes**:
 - **Container died**: `docker compose up -d` from `/opt/redis`.
 - **Out of disk**: `docker system prune -af` then restart.
-- **Network/SG misconfigured**: check security group; should allow 6379 from App Runner's SG.
+- **Network/SG misconfigured**: check security group; should allow 6379 from the Fargate task SG.
 
 **If unrecoverable** (5+ minutes):
 - Application **continues to work** — public users polling, judges/admin can manually refresh.
 - Public falls back to polling automatically.
 - Judges/admin see "Reconnecting…" indicator; SSE will reconnect when Redis returns.
 - Provision a new EC2 from the Terraform/CloudFormation template (~5 min).
-- Update `REDIS_URL` env var on App Runner.
-- Trigger App Runner deployment to pick up new env.
+- Update `REDIS_URL` env var on the ECS task definition.
+- Trigger an ECS Express Mode service update to roll out the new env (`aws ecs update-express-gateway-service ...`).
 
 **Don't panic**: Redis is fan-out only. No tournament data is at risk.
 
@@ -201,8 +204,8 @@ This is why the print-friendly view is a real feature, not a nice-to-have.
 
 CloudWatch log groups:
 
-- `/aws/apprunner/tourney-api/application` — FastAPI logs.
-- `/aws/apprunner/tourney-api/service` — App Runner platform logs (deploys, health).
+- `/ecs/tourney-api` — FastAPI application logs (auto-configured by Express Mode).
+- `/aws/ecs/containerinsights/tourney-api/performance` — Fargate task metrics (CPU, memory, network).
 - `/ec2/redis-host/system` — EC2 system logs (via CloudWatch agent).
 - `/ec2/redis-host/docker` — Docker container logs.
 
