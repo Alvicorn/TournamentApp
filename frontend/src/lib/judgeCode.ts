@@ -1,4 +1,4 @@
-const CHARSET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+const CHARSET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const INDEX: Record<string, number> = Object.fromEntries([...CHARSET].map((c, i) => [c, i]));
 const N = CHARSET.length;
 

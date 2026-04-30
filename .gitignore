@@ -34,3 +34,5 @@ Thumbs.db
 # Build artifacts
 build/
 *.log
+
+.claude/worktrees
