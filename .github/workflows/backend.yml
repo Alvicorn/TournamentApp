@@ -105,5 +105,9 @@ jobs:
         run: |
           aws ecs update-express-gateway-service \
             --service-arn $ECS_EXPRESS_SERVICE_ARN \
-            --primary-container "image=$ECR_REGISTRY/tournament_app:latest" \
+            --primary-container '{
+              "image": "$ECR_REGISTRY/tournament_app:latest",
+              "containerPort": 8080
+            }' \
+            --health-check-path /ping \
             --region $AWS_REGION
