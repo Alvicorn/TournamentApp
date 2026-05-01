@@ -106,5 +106,4 @@ jobs:
           aws ecs update-express-gateway-service \
             --service-arn $ECS_EXPRESS_SERVICE_ARN \
             --primary-container "image=$ECR_REGISTRY/tournament_app:latest" \
-            --monitor-mode OFF \
             --region $AWS_REGION
