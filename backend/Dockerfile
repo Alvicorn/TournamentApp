@@ -15,7 +15,7 @@ COPY alembic/ alembic/
 COPY alembic.ini .
 
 ENV PATH="/app/.venv/bin:$PATH"
-EXPOSE 8080
+EXPOSE 80
 
 # Run Alembic migrations then start uvicorn
 # CMD alembic upgrade head && \
