@@ -8,7 +8,7 @@ from app.config import get_settings
 router = APIRouter(tags=["health"])
 
 
-def _ping_supabase() -> bool:
+def _ping_database() -> bool:
     settings = get_settings()
     if not settings.supabase_url:
         return False
@@ -25,14 +25,14 @@ def _ping_supabase() -> bool:
 
 @router.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {"status": "ok", "description": "Backend is up"}
 
 
-@router.get("/health/supabase")
-def health_supabase() -> dict[str, str]:
-    if not _ping_supabase():
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "supabase unreachable")
-    return {"status": "ok"}
+@router.get("/health/database")
+def health_database() -> dict[str, str]:
+    if not _ping_database():
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "database unreachable")
+    return {"status": "ok", "description": "database is up"}
 
 
 # @router.get("/health/redis")

@@ -109,5 +109,5 @@ jobs:
               "image":"'"$ECR_REGISTRY/tournament_app:latest"'",
               "containerPort":8080
             }' \
-            --health-check-path /ping \
+            --health-check-path /health \
             --region $AWS_REGION
