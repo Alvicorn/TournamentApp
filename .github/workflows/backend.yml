@@ -107,7 +107,12 @@ jobs:
             --service-arn $ECS_EXPRESS_SERVICE_ARN \
             --primary-container '{
               "image":"'"$ECR_REGISTRY/tournament_app:latest"'",
-              "containerPort":8080
+              "containerPort":8080,
+              "environment":[
+                {"name":"DATABASE_URL","value":"'"$DATABASE_URL"'"},
+                {"name":"DATABASE_KEY","value":"'"$DATABASE_KEY"'"},
+                {"name":"ADMIN_EMAIL_ALLOWLIST","value":"'"$ADMIN_EMAIL_ALLOWLIST"'"}
+              ]
             }' \
             --health-check-path /health \
             --region $AWS_REGION
