@@ -33,12 +33,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
-
-# @app.get("/ping")
-# def ping():
-#     settings = get_settings()
-#     return {
-#         "status": "ok",
-#         "admin emails": settings.admin_emails
-#     }

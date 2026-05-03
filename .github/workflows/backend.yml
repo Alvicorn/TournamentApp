@@ -102,8 +102,8 @@ jobs:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DATABASE_KEY: ${{ secrets.DATABASE_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           ADMIN_EMAIL_ALLOWLIST: ${{ secrets.ADMIN_EMAIL_ALLOWLIST }}
         run: |
           aws ecs update-express-gateway-service \
@@ -112,8 +112,8 @@ jobs:
               "image":"'"$ECR_REGISTRY/tournament_app:latest"'",
               "containerPort":8080,
               "environment":[
-                {"name":"DATABASE_URL","value":"'"$DATABASE_URL"'"},
-                {"name":"DATABASE_KEY","value":"'"$DATABASE_KEY"'"},
+                {"name":"SUPABASE_URL","value":"'"$SUPABASE_URL"'"},
+                {"name":"SUPABASE_KEY","value":"'"$SUPABASE_KEY"'"},
                 {"name":"ADMIN_EMAIL_ALLOWLIST","value":"'"$ADMIN_EMAIL_ALLOWLIST"'"}
               ]
             }' \
