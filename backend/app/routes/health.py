@@ -23,19 +23,14 @@ def _ping_database() -> bool:
 
 
 @router.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "description": "Backend is up"}
-
-
-@router.get("/health/database")
 def health_database() -> dict[str, str]:
     if not _ping_database():
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "database unreachable")
-    return {"status": "ok", "description": "database is up"}
+    return {"status": "ok"}
 
 
 @router.get("/health/redis")
 def health_redis() -> dict[str, str]:
     if not ping_redis():
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "redis unreachable")
-    return {"status": "ok", "description": "redis is up"}
+    return {"status": "ok"}
