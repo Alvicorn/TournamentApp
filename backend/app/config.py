@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_key: str = ""
 
-    # redis_url: str = ""
+    redis_url: str = ""
 
     # supabase_jwks_url: str = ""
     # supabase_audience: str = "authenticated"

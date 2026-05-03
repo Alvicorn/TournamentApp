@@ -104,6 +104,7 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
           ADMIN_EMAIL_ALLOWLIST: ${{ secrets.ADMIN_EMAIL_ALLOWLIST }}
         run: |
           aws ecs update-express-gateway-service \
@@ -114,6 +115,7 @@ jobs:
               "environment":[
                 {"name":"SUPABASE_URL","value":"'"$SUPABASE_URL"'"},
                 {"name":"SUPABASE_KEY","value":"'"$SUPABASE_KEY"'"},
+                {"name":"REDIS_URL","value":"'"$REDIS_URL"'"},
                 {"name":"ADMIN_EMAIL_ALLOWLIST","value":"'"$ADMIN_EMAIL_ALLOWLIST"'"}
               ]
             }' \
