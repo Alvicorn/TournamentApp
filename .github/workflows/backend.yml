@@ -106,6 +106,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           REDIS_URL: ${{ secrets.REDIS_URL }}
           ADMIN_EMAIL_ALLOWLIST: ${{ secrets.ADMIN_EMAIL_ALLOWLIST }}
+          JUDGE_JWT_SECRET: ${{ secrets.JUDGE_JWT_SECRET }}
         run: |
           aws ecs update-express-gateway-service \
             --service-arn $ECS_EXPRESS_SERVICE_ARN \
@@ -117,6 +118,7 @@ jobs:
                 {"name":"SUPABASE_KEY","value":"'"$SUPABASE_KEY"'"},
                 {"name":"REDIS_URL","value":"'"$REDIS_URL"'"},
                 {"name":"ADMIN_EMAIL_ALLOWLIST","value":"'"$ADMIN_EMAIL_ALLOWLIST"'"}
+                {"name":"JUDGE_JWT_SECRET","value":"'"$JUDGE_JWT_SECRET"'"}
               ]
             }' \
             --health-check-path /health \

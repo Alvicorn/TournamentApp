@@ -11,14 +11,12 @@ class Settings(BaseSettings):
 
     supabase_url: str = ""
     supabase_key: str = ""
+    supabase_audience: str = "authenticated"
 
     redis_url: str = ""
 
-    # supabase_jwks_url: str = ""
-    # supabase_audience: str = "authenticated"
-
-    # judge_jwt_secret: str = "change-me-in-prod"
-    # judge_jwt_ttl_seconds: int = 24 * 60 * 60
+    judge_jwt_secret: str = ""
+    judge_jwt_ttl_seconds: int = 24 * 60 * 60
 
     admin_email_allowlist: str = ""
 
@@ -26,6 +24,10 @@ class Settings(BaseSettings):
     vapid_private_key: str = ""
 
     cors_allow_origins: list[str] = Field(default_factory=lambda: ["http://localhost:8080"])
+
+    @property
+    def supabase_jwks_url(self) -> str:
+        return f"{self.supabase_url}/auth/v1/.well-known/jwks.json"
 
     @property
     def admin_emails(self) -> set[str]:
