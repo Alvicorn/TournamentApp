@@ -1,0 +1,11 @@
+{
+  "name": "tournament-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build:frontend": "pnpm --filter frontend build",
+    "test:frontend": "pnpm --filter frontend test"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

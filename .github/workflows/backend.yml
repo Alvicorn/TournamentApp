@@ -1,0 +1,125 @@
+name: Backend CI
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install deps
+        run: uv sync --all-extras
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Type check (mypy)
+        run: uv run mypy app
+
+      - name: Clock convention check
+        run: uv run python -m app.lint.clock_convention
+
+      - name: Unit + BDD tests
+        run: uv run pytest tests/ -v --tb=short
+        env:
+          DATABASE_URL: "postgresql+psycopg://postgres:postgres@localhost:5432/tournament_test"
+          REDIS_URL: "redis://localhost:6379/0"
+          JUDGE_JWT_SECRET: "test-secret"
+          ADMIN_EMAIL_ALLOWLIST: "admin@test.com"
+          SUPABASE_URL: "https://placeholder.supabase.co"
+          SUPABASE_KEY: "placeholder-key"
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tournament_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+  deploy:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/staging-')
+    needs: lint-test
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push Docker image
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build --platform linux/x86_64 -t $ECR_REGISTRY/tournament_app:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/tournament_app:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/tournament_app:$IMAGE_TAG $ECR_REGISTRY/tournament_app:latest
+          docker push $ECR_REGISTRY/tournament_app:latest
+
+      - name: Deploy to ECS Express Mode
+        env:
+          ECS_EXPRESS_SERVICE_ARN: ${{ secrets.ECS_EXPRESS_SERVICE_ARN }}
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ github.sha }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          ADMIN_EMAIL_ALLOWLIST: ${{ secrets.ADMIN_EMAIL_ALLOWLIST }}
+          JUDGE_JWT_SECRET: ${{ secrets.JUDGE_JWT_SECRET }}
+        run: |
+          aws ecs update-express-gateway-service \
+            --service-arn $ECS_EXPRESS_SERVICE_ARN \
+            --primary-container '{
+              "image":"'"$ECR_REGISTRY/tournament_app:latest"'",
+              "containerPort":8080,
+              "environment":[
+                {"name":"SUPABASE_URL","value":"'"$SUPABASE_URL"'"},
+                {"name":"SUPABASE_KEY","value":"'"$SUPABASE_KEY"'"},
+                {"name":"REDIS_URL","value":"'"$REDIS_URL"'"},
+                {"name":"ADMIN_EMAIL_ALLOWLIST","value":"'"$ADMIN_EMAIL_ALLOWLIST"'"},
+                {"name":"JUDGE_JWT_SECRET","value":"'"$JUDGE_JWT_SECRET"'"}
+              ]
+            }' \
+            --health-check-path /health \
+            --region $AWS_REGION

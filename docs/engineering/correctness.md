@@ -7,7 +7,7 @@ This document captures the correctness-critical behaviors that are easy to get w
 **The server is the authoritative source of round time.** The client only displays time; it never decides time.
 
 ### Single clock: Postgres `now()`
-All server-side timestamps come from Postgres `now() AT TIME ZONE 'utc'`, **not** Python's `datetime.utcnow()`. This avoids drift between FastAPI process clocks (which can vary across App Runner workers) and the database. SQLAlchemy `server_default=func.now()` handles inserts; explicit `now()` in UPDATE statements handles modifications.
+All server-side timestamps come from Postgres `now() AT TIME ZONE 'utc'`, **not** Python's `datetime.utcnow()`. This avoids drift between FastAPI process clocks (which can vary across Fargate task replicas) and the database. SQLAlchemy `server_default=func.now()` handles inserts; explicit `now()` in UPDATE statements handles modifications.
 
 Why this matters: under load, a Python clock can be 50–200ms behind the DB. For a sudden-death scenario where two scores arrive milliseconds apart, this matters.
 
@@ -223,7 +223,7 @@ Admin can add participants to a division **after** the tournament is `active`, i
 def add_late_participant(division, participant):
     if division.state != "round_robin":
         raise HTTPException(409, "Division has advanced past round-robin; late additions not allowed")
-    
+
     existing = get_active_participants(division)
     new_matches = []
     for opponent in existing:
@@ -259,7 +259,7 @@ def judge_login(tournament_id, code):
     new_jti = uuid4()
     judge.current_session_jti = new_jti  # Overwrites previous
     db.commit()
-    
+
     token = sign_jwt({
         "sub": judge.id,
         "jti": str(new_jti),

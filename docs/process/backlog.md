@@ -11,7 +11,7 @@ Each phase ends with something demoable. Don't skip phase 1's deploy step — se
 - [x] FastAPI app: health check, JWT helpers, Supabase Auth integration
 - [x] `/health/redis` endpoint
 - [x] Redis EC2 provisioning via Terraform (with hardening: `restart: always`, systemd, EC2 auto-recovery)
-- [x] CloudWatch alarms (App Runner 5xx, EC2 status checks, CPU credits, Redis health)
+- [x] CloudWatch alarms (ALB 5xx, ECS unhealthy tasks, EC2 status checks, CPU credits, Redis health)
 - [x] React app: router, Zustand store skeleton, role-based auth shells
 - [x] Connection status indicator wired up
 - [x] `pytest-bdd` set up with first feature file as proof-of-concept
