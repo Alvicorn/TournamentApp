@@ -29,21 +29,21 @@ jobs:
       - name: Lint (ruff)
         run: uv run ruff check .
 
-      # - name: Type check (mypy)
-      #   run: uv run mypy app
+      - name: Type check (mypy)
+        run: uv run mypy app
 
-      # - name: Clock convention check
-      #   run: uv run python -m app.lint.clock_convention
+      - name: Clock convention check
+        run: uv run python -m app.lint.clock_convention
 
-      # - name: Unit + BDD tests
-      #   run: uv run pytest tests/ -v --tb=short
-      #   env:
-      #     DATABASE_URL: "postgresql+psycopg://postgres:postgres@localhost:5432/tournament_test"
-      #     REDIS_URL: "redis://localhost:6379/0"
-      #     JUDGE_JWT_SECRET: "test-secret"
-      #     ADMIN_EMAIL_ALLOWLIST: "admin@test.com"
-      #     SUPABASE_URL: "https://placeholder.supabase.co"
-      #     SUPABASE_KEY: "placeholder-key"
+      - name: Unit + BDD tests
+        run: uv run pytest tests/ -v --tb=short
+        env:
+          DATABASE_URL: "postgresql+psycopg://postgres:postgres@localhost:5432/tournament_test"
+          REDIS_URL: "redis://localhost:6379/0"
+          JUDGE_JWT_SECRET: "test-secret"
+          ADMIN_EMAIL_ALLOWLIST: "admin@test.com"
+          SUPABASE_URL: "https://placeholder.supabase.co"
+          SUPABASE_KEY: "placeholder-key"
 
     services:
       postgres:
