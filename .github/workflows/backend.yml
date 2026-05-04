@@ -117,7 +117,7 @@ jobs:
                 {"name":"SUPABASE_URL","value":"'"$SUPABASE_URL"'"},
                 {"name":"SUPABASE_KEY","value":"'"$SUPABASE_KEY"'"},
                 {"name":"REDIS_URL","value":"'"$REDIS_URL"'"},
-                {"name":"ADMIN_EMAIL_ALLOWLIST","value":"'"$ADMIN_EMAIL_ALLOWLIST"'"}
+                {"name":"ADMIN_EMAIL_ALLOWLIST","value":"'"$ADMIN_EMAIL_ALLOWLIST"'"},
                 {"name":"JUDGE_JWT_SECRET","value":"'"$JUDGE_JWT_SECRET"'"}
               ]
             }' \
