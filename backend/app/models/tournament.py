@@ -1,6 +1,7 @@
 """Tournament ORM model."""
 
 import enum
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -23,7 +24,7 @@ class Tournament(Base, TimestampMixin, SoftDeleteMixin):
 
     id: Mapped[UUID] = uuid_pk()
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    competition_date: Mapped[Any] = mapped_column(Date, nullable=False)
+    competition_date: Mapped[date] = mapped_column(Date, nullable=False)
     time_zone: Mapped[str] = mapped_column(Text, nullable=False)
     rounds_per_match: Mapped[int] = mapped_column(Integer, nullable=False)
     round_length_seconds: Mapped[int] = mapped_column(Integer, nullable=False)

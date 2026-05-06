@@ -6,13 +6,14 @@ so the Postgres clock is the only authority. See ``docs/engineering/correctness.
 All deletes are soft deletes via ``deleted_at``.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, Query, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.sql import Select
 
 
 class Base(DeclarativeBase):
@@ -58,12 +59,12 @@ class SoftDeleteMixin:
     def soft_delete(self) -> None:
         # Service layer should overwrite via SQL ``UPDATE ... SET deleted_at = now()``
         # to use the DB clock; this Python fallback exists for tests / scripts.
-        self.deleted_at = datetime.now()
+        self.deleted_at = datetime.now(UTC)
 
     @property
     def is_deleted(self) -> bool:
         return self.deleted_at is not None
 
     @classmethod
-    def filter_active(cls, query: Query[Any]) -> Query[Any]:
-        return query.filter(cls.deleted_at.is_(None))
+    def filter_active(cls, stmt: Select[Any]) -> Select[Any]:
+        return stmt.where(cls.deleted_at.is_(None))
