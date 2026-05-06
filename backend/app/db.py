@@ -8,12 +8,10 @@ from supabase import Client, create_client
 
 from app.config import get_settings
 
-_settings = get_settings()
-
 # ---------------------------------------------------------------------------
 # Supabase client (Phase 1 — kept for auth proxy)
 # ---------------------------------------------------------------------------
-supabase: Client = create_client(_settings.supabase_url, _settings.supabase_key)
+supabase: Client = create_client(get_settings().supabase_url, get_settings().supabase_key)
 
 
 # ---------------------------------------------------------------------------
@@ -29,7 +27,7 @@ def _engine() -> Engine:
 
 @lru_cache
 def _session_factory() -> sessionmaker:  # type: ignore[type-arg]
-    return sessionmaker(bind=_engine(), autocommit=False, autoflush=False)
+    return sessionmaker(bind=_engine(), autoflush=False)
 
 
 def get_db() -> Generator[Session, None, None]:
