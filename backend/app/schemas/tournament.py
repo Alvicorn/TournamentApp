@@ -1,7 +1,7 @@
 """Tournament Pydantic schemas."""
 
 from datetime import date
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -12,7 +12,7 @@ from app.models.tournament import LifecycleState
 class CustomFieldSpec(BaseModel):
     key: str
     label: str
-    type: str  # "text" | "number" | "select"
+    type: Literal["text", "number", "select"]
     required: bool = False
 
 

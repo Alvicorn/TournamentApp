@@ -2,8 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import text
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import AdminUser
@@ -51,7 +50,6 @@ def transition_lifecycle(
     tournament_id: UUID,
     body: LifecycleTransition,
     admin: AdminUser,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),  # noqa: B008
 ) -> TournamentOut:
     return svc.transition_lifecycle(
@@ -77,10 +75,7 @@ def delete_tournament(
     t = svc.get_tournament_or_404(db, tournament_id)
     if t.lifecycle_state not in (LifecycleState.completed,) and not t.is_demo:
         raise HTTPException(409, "Only demo or completed tournaments can be deleted")
-    db.execute(
-        text("UPDATE tournaments SET deleted_at = now() WHERE id = :id"), {"id": tournament_id}
-    )
-    db.commit()
+    svc.delete_tournament(db, tournament_id, actor_id=admin.user_id, actor_email=admin.email)
 
 
 @router.get("/{tournament_id}/unclaimed-summary")

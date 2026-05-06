@@ -234,6 +234,20 @@ def move_participant(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Participant not found in this division")
 
     p.division_id = body.target_division_id
+    al.write(
+        db,
+        tournament_id=source.tournament_id,
+        actor_type=ActorType.admin,
+        actor_id=UUID(actor_id),
+        actor_display_name=actor_email,
+        action="participant.moved",
+        description=f"Participant moved from division '{source.name}' to '{target.name}'",
+        metadata={
+            "participant_id": str(body.participant_id),
+            "from_division_id": str(division_id),
+            "to_division_id": str(body.target_division_id),
+        },
+    )
     db.commit()
 
 

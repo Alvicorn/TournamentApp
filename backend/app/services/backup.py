@@ -6,8 +6,10 @@ runs outside the request lifecycle.
 
 import gzip
 import logging
+import os
 import subprocess
 import tempfile
+import urllib.parse
 from pathlib import Path
 from uuid import UUID
 
@@ -56,10 +58,23 @@ def run_backup(backup_id: UUID) -> None:
             tmp_path = Path(tmp_file.name)
 
         try:
+            parsed = urllib.parse.urlparse(settings.database_url)
+            pg_env = {**os.environ, "PGPASSWORD": parsed.password or ""}
+            pg_args = ["pg_dump"]
+            if parsed.hostname:
+                pg_args += ["-h", parsed.hostname]
+            if parsed.port:
+                pg_args += ["-p", str(parsed.port)]
+            if parsed.username:
+                pg_args += ["-U", parsed.username]
+            if parsed.path and parsed.path.lstrip("/"):
+                pg_args += ["-d", parsed.path.lstrip("/")]
+
             result = subprocess.run(
-                ["pg_dump", "--no-password", settings.database_url],
+                pg_args,
                 capture_output=True,
                 timeout=300,
+                env=pg_env,
             )
             if result.returncode != 0:
                 log.error("pg_dump failed: %s", result.stderr.decode())

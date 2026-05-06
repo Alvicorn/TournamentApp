@@ -79,6 +79,7 @@ def delete_judge(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Judge not found")
 
     # If judge has an active match, pause it and unassign
+    # Deferred import to avoid circular dependency (match → judge/participant → match)
     from app.models.match import Match, MatchState
 
     active_match = db.execute(

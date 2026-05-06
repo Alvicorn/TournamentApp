@@ -53,7 +53,14 @@ async def _hourly_backup_loop() -> None:
                 if active:
                     b = create_backup_record(db, active.id, triggered_by=BackupTrigger.hourly)
                     db.commit()
-                    asyncio.create_task(asyncio.to_thread(run_backup, b.id))
+
+                    def _log_backup_error(task: asyncio.Task[None]) -> None:
+                        exc = task.exception()
+                        if exc:
+                            log.exception("Hourly backup task failed", exc_info=exc)
+
+                    backup_task = asyncio.create_task(asyncio.to_thread(run_backup, b.id))
+                    backup_task.add_done_callback(_log_backup_error)
                     log.info("Hourly backup scheduled for tournament %s", active.id)
             finally:
                 db.close()

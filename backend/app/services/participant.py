@@ -99,6 +99,7 @@ def delete_participant(
     p = _get_participant_or_404(db, participant_id)
 
     # Check if participant has any matches (scheduled or otherwise)
+    # Deferred import to avoid circular dependency (match → judge/participant → match)
     from app.models.match import Match
 
     has_matches = db.execute(

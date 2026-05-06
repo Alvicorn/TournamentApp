@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.activity_log import ActorType
@@ -50,6 +50,17 @@ def reorder_matches(
     actor_email: str,
 ) -> list[Match]:
     d = _get_division_or_404(db, division_id)
+
+    # Validate: all active matches in the division must be included
+    active_count = db.execute(
+        select(func.count()).where(Match.division_id == division_id, Match.deleted_at.is_(None))
+    ).scalar_one()
+    if len(body.ordered_match_ids) != active_count:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"Must provide all {active_count} active match IDs; got {len(body.ordered_match_ids)}",
+        )
+
     for new_index, match_id in enumerate(body.ordered_match_ids):
         m = db.execute(
             select(Match).where(
@@ -144,6 +155,8 @@ def edit_result(
         m.winner_id = m.competitor_a_id
     elif total_b > total_a:
         m.winner_id = m.competitor_b_id
+    else:
+        m.winner_id = None  # tie — clear stale winner
 
     al.write(
         db,

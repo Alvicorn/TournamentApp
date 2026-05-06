@@ -163,6 +163,29 @@ def transition_lifecycle(
     return t
 
 
+def delete_tournament(
+    db: Session,
+    tournament_id: UUID,
+    actor_id: str,
+    actor_email: str,
+) -> None:
+    t = get_tournament_or_404(db, tournament_id)
+    al.write(
+        db,
+        tournament_id=tournament_id,
+        actor_type=ActorType.admin,
+        actor_id=UUID(actor_id),
+        actor_display_name=actor_email,
+        action="tournament.deleted",
+        description=f"Tournament '{t.name}' deleted",
+    )
+    db.execute(
+        text("UPDATE tournaments SET deleted_at = now() WHERE id = :id"),
+        {"id": tournament_id},
+    )
+    db.commit()
+
+
 def reset_tournament(
     db: Session,
     tournament_id: UUID,

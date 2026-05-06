@@ -28,10 +28,10 @@ def list_activity(
         select(ActivityLog)
         .where(ActivityLog.tournament_id == tournament_id)
         .order_by(ActivityLog.created_at.desc())
-        .limit(limit)
     )
     if since:
         stmt = stmt.where(ActivityLog.created_at > since)
     if division_id:
         stmt = stmt.where(ActivityLog.division_id == division_id)
+    stmt = stmt.limit(limit)
     return list(db.execute(stmt).scalars())  # type: ignore[arg-type]
