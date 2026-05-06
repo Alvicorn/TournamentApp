@@ -5,7 +5,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from app.config import get_settings
-from app.routes import auth, health, judges, tournaments
+from app.routes import auth, health, judges, participants, tournaments
 
 
 def create_app() -> FastAPI:
@@ -28,6 +28,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix="/api/v1")
     app.include_router(tournaments.router, prefix="/api/v1")
     app.include_router(judges.router, prefix="/api/v1")
+    app.include_router(participants.router, prefix="/api/v1")
 
     return app
 
