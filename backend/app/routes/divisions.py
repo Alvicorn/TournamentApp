@@ -3,12 +3,10 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import AdminUser
 from app.db import get_db
-from app.models.match import Match
 from app.schemas.division import (
     AssignParticipantBody,
     DivisionCreate,
@@ -87,31 +85,3 @@ def generate_round_robin(
     return svc.generate_division_round_robin(
         db, division_id, actor_id=admin.user_id, actor_email=admin.email
     )
-
-
-@router.get("/divisions/{division_id}/matches", response_model=list[dict])
-def list_matches_for_division(
-    division_id: UUID,
-    admin: AdminUser,
-    db: Session = Depends(get_db),  # noqa: B008
-) -> list[dict]:
-    """Stub — returns match data from DB for division. Task 12 adds the real match routes."""
-    matches = list(
-        db.execute(
-            select(Match)
-            .where(Match.division_id == division_id, Match.deleted_at.is_(None))
-            .order_by(Match.order_index)
-        ).scalars()
-    )
-    return [
-        {
-            "id": str(m.id),
-            "division_id": str(m.division_id),
-            "competitor_a_id": str(m.competitor_a_id),
-            "competitor_b_id": str(m.competitor_b_id),
-            "phase": m.phase,
-            "order_index": m.order_index,
-            "state": m.state,
-        }
-        for m in matches
-    ]
