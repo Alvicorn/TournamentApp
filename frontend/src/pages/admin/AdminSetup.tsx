@@ -9,12 +9,11 @@ import {
 } from "../../api/tournaments";
 import type { CustomFieldSpec } from "../../api/types";
 
-const EMPTY_FIELD: CustomFieldSpec = {
-  key: "",
-  label: "",
-  type: "text",
-  required: false,
-};
+type FieldRow = CustomFieldSpec & { _id: string };
+
+function makeEmptyField(): FieldRow {
+  return { key: "", label: "", type: "text", required: false, _id: crypto.randomUUID() };
+}
 
 export default function AdminSetup() {
   const { addToast } = useNotificationsStore();
@@ -27,7 +26,7 @@ export default function AdminSetup() {
   const [slideshowSlideSeconds, setSlideshowSlideSeconds] = useState(10);
   const [isDemo, setIsDemo] = useState(false);
   const [judgeAutoReleaseSeconds, setJudgeAutoReleaseSeconds] = useState(300);
-  const [customFields, setCustomFields] = useState<CustomFieldSpec[]>([]);
+  const [customFields, setCustomFields] = useState<FieldRow[]>([]);
 
   useEffect(() => {
     if (tournament) {
@@ -38,7 +37,7 @@ export default function AdminSetup() {
       setSlideshowSlideSeconds(tournament.slideshow_slide_seconds);
       setIsDemo(tournament.is_demo);
       setJudgeAutoReleaseSeconds(tournament.judge_auto_release_seconds);
-      setCustomFields(tournament.custom_participant_fields);
+      setCustomFields(tournament.custom_participant_fields.map((f) => ({ ...f, _id: crypto.randomUUID() })));
     }
   }, [tournament]);
 
@@ -51,7 +50,7 @@ export default function AdminSetup() {
   const isCompleted = tournament?.lifecycle_state === "completed";
 
   function addField() {
-    setCustomFields((prev) => [...prev, { ...EMPTY_FIELD }]);
+    setCustomFields((prev) => [...prev, makeEmptyField()]);
   }
 
   function removeField(index: number) {
@@ -75,7 +74,7 @@ export default function AdminSetup() {
       slideshow_slide_seconds: slideshowSlideSeconds,
       is_demo: isDemo,
       judge_auto_release_seconds: judgeAutoReleaseSeconds,
-      custom_participant_fields: customFields,
+      custom_participant_fields: customFields.map(({ _id: _, ...rest }) => rest),
     };
     try {
       if (tournament) {
@@ -222,7 +221,7 @@ export default function AdminSetup() {
           <div className="space-y-2">
             {customFields.map((f, i) => (
               <div
-                key={i}
+                key={f._id}
                 className="flex items-center gap-2 rounded border border-slate-200 p-2"
               >
                 <input

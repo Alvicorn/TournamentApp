@@ -12,7 +12,7 @@ import {
   useMoveParticipant,
   useUpdateDivision,
 } from "../../api/divisions";
-import { useParticipants } from "../../api/participants";
+import { useParticipants, useUpdateParticipant } from "../../api/participants";
 import { useEditResult, useMatches, useReorderMatches } from "../../api/matches";
 import type { Match, MatchRound } from "../../api/types";
 
@@ -38,6 +38,7 @@ export default function AdminDivisionDetail() {
   const updateDivision = useUpdateDivision(tournamentId);
   const reorderMatches = useReorderMatches(divisionId, tournamentId);
   const editResult = useEditResult(divisionId, tournamentId);
+  const removeFromDivision = useUpdateParticipant(tournamentId);
 
   const [selectedAssign, setSelectedAssign] = useState("");
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
@@ -193,6 +194,22 @@ export default function AdminDivisionDetail() {
                       className="text-xs text-slate-500 hover:text-slate-700"
                     >
                       Move
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await removeFromDivision.mutateAsync({
+                            id: p.id,
+                            body: { division_id: null },
+                          });
+                          addToast("Participant removed from division", "success");
+                        } catch {
+                          addToast("Failed to remove participant from division", "error");
+                        }
+                      }}
+                      className="text-xs text-red-500 hover:text-red-700"
+                    >
+                      Remove
                     </button>
                   </div>
                 )}

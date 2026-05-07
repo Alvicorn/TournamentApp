@@ -4,6 +4,7 @@ import { Skeleton } from "../../components/Skeleton";
 import { StateBadge } from "../../components/StateBadge";
 import { useNotificationsStore } from "../../stores/useNotificationsStore";
 import { useTournament } from "../../api/tournaments";
+import { useDivisions } from "../../api/divisions";
 import {
   useAddParticipant,
   useDeleteParticipant,
@@ -24,6 +25,7 @@ export default function AdminParticipants() {
   const { data: participants = [], isLoading: pLoading } = useParticipants(
     tournament?.id ?? ""
   );
+  const { data: divisions = [] } = useDivisions(tournament?.id ?? "");
   const addParticipant = useAddParticipant(tournament?.id ?? "");
   const updateParticipant = useUpdateParticipant(tournament?.id ?? "");
   const deleteParticipant = useDeleteParticipant(tournament?.id ?? "");
@@ -85,6 +87,8 @@ export default function AdminParticipants() {
       addToast("Failed to remove participant", "error");
     }
   }
+
+  const divisionNameMap = Object.fromEntries(divisions.map((d) => [d.id, d.name]));
 
   if (tLoading || pLoading) return <Skeleton className="h-64 w-full" />;
 
@@ -225,7 +229,7 @@ export default function AdminParticipants() {
                   <tr key={p.id}>
                     <td className="px-4 py-2 font-medium text-slate-800">{p.name}</td>
                     <td className="px-4 py-2 text-slate-500">
-                      {p.division_id ?? "—"}
+                      {p.division_id ? (divisionNameMap[p.division_id] ?? p.division_id) : "—"}
                     </td>
                     {specs.map((s) => (
                       <td key={s.key} className="px-4 py-2 text-slate-600">

@@ -32,18 +32,14 @@ export default function AdminActivity() {
     {
       limit,
       division_id: divisionId || undefined,
+      actor_type: actorType || undefined,
       enabled: !!tournament?.id,
       refetchInterval: 5_000,
     }
   );
 
   const filtered = entries.filter((e) => {
-    if (actorType && e.actor_type !== actorType) return false;
-    if (
-      search &&
-      !e.description.toLowerCase().includes(search.toLowerCase())
-    )
-      return false;
+    if (search && !e.description.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 

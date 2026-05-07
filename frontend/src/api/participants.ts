@@ -45,6 +45,7 @@ export function useUpdateParticipant(tournamentId: string) {
       body: {
         name?: string;
         custom_fields?: Record<string, string | number | null>;
+        division_id?: null;
       };
     }) =>
       apiFetch<Participant>(`/api/v1/participants/${id}`, {
