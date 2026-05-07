@@ -106,6 +106,16 @@ def test_assign_participant_already_in_division_rejected(client: TestClient) -> 
     assert "ALREADY_IN_DIVISION" in r.json()["detail"]
 
 
+def test_assign_in_setup_generates_no_matches(client: TestClient) -> None:
+    t = _tournament(client)
+    d = _division(client, t["id"])
+    p = _participant(client, t["id"])
+    client.post(f"/api/v1/divisions/{d['id']}/assign-participant", json={"participant_id": p["id"]})
+    r = client.get(f"/api/v1/divisions/{d['id']}/matches")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
 # ---------------------------------------------------------------------------
 # Round-robin generation
 # ---------------------------------------------------------------------------

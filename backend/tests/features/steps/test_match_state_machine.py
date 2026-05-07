@@ -149,9 +149,18 @@ def result_updated(ctx):
 
 @then("an activity log entry with action match.result_edited exists")
 def activity_log_entry(ctx):
-    # New scores: a=4, b=6 → competitor B wins
+    # Verify winner recomputed: new scores a=4, b=6 → competitor B wins
     updated = ctx["response"].json()
     assert updated["winner_id"] == ctx["pb"]["id"]
+    # Verify activity log entry was written
+    tournament_id = ctx["tournament"]["id"]
+    log_r = ctx["client"].get(f"/api/v1/tournaments/{tournament_id}/activity?limit=50")
+    assert log_r.status_code == 200
+    items = log_r.json()
+    actions = [entry["action"] for entry in items]
+    assert "match.result_edited" in actions, (
+        f"Expected match.result_edited in activity log, got: {actions}"
+    )
 
 
 @then("a 409 error is returned")

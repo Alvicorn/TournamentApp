@@ -107,6 +107,7 @@ def test_demo_reset(client: TestClient) -> None:
     resp = client.post(f"/api/v1/tournaments/{t['id']}/reset")
     assert resp.status_code == 200
     assert resp.json()["lifecycle_state"] == "setup"
+    assert resp.json()["custom_participant_fields"] == []
 
 
 def test_non_demo_reset_rejected(client: TestClient) -> None:
