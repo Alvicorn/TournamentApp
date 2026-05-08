@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     supabase_key: str = ""
     supabase_audience: str = "authenticated"
 
+    database_url: str = ""  # e.g. postgresql+psycopg://user:pass@host/db
+
     redis_url: str = ""
 
     judge_jwt_secret: str = ""
@@ -24,6 +26,12 @@ class Settings(BaseSettings):
     vapid_private_key: str = ""
 
     cors_allow_origins: list[str] = Field(default_factory=lambda: ["http://localhost:8080"])
+
+    # S3 backup storage
+    s3_bucket: str = ""
+    s3_region: str = "us-east-1"
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
 
     @property
     def supabase_jwks_url(self) -> str:
