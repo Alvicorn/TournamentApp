@@ -103,6 +103,15 @@ def test_custom_fields_frozen_when_active(client: TestClient) -> None:
 
 def test_demo_reset(client: TestClient) -> None:
     t = _create_tournament(client, is_demo=True)
+    # Add a custom field — reset must clear it
+    client.patch(
+        f"/api/v1/tournaments/{t['id']}",
+        json={
+            "custom_participant_fields": [
+                {"key": "belt", "label": "Belt", "type": "text", "required": False}
+            ]
+        },
+    )
     client.post(f"/api/v1/tournaments/{t['id']}/lifecycle", json={"state": "active"})
     resp = client.post(f"/api/v1/tournaments/{t['id']}/reset")
     assert resp.status_code == 200

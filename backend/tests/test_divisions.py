@@ -110,7 +110,10 @@ def test_assign_in_setup_generates_no_matches(client: TestClient) -> None:
     t = _tournament(client)
     d = _division(client, t["id"])
     p = _participant(client, t["id"])
-    client.post(f"/api/v1/divisions/{d['id']}/assign-participant", json={"participant_id": p["id"]})
+    assign_r = client.post(
+        f"/api/v1/divisions/{d['id']}/assign-participant", json={"participant_id": p["id"]}
+    )
+    assert assign_r.status_code == 200
     r = client.get(f"/api/v1/divisions/{d['id']}/matches")
     assert r.status_code == 200
     assert r.json() == []
