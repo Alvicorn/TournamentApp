@@ -175,9 +175,12 @@ def active_with_participant(db_session):
 
 @when("the admin completes the tournament")
 def complete_tournament(ctx):
-    ctx["client"].post(
+    r = ctx["client"].post(
         f"/api/v1/tournaments/{ctx['tournament']['id']}/lifecycle",
         json={"state": "completed"},
+    )
+    assert r.status_code == 200, (
+        f"Expected 200 completing tournament, got {r.status_code}: {r.text}"
     )
 
 
