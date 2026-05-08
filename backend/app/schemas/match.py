@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.match import MatchPhase, MatchState
 
@@ -35,4 +35,4 @@ class RoundScoreIn(BaseModel):
 
 
 class EditResultBody(BaseModel):
-    round_scores: list[RoundScoreIn]
+    round_scores: list[RoundScoreIn] = Field(min_length=1)

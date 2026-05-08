@@ -93,6 +93,16 @@ def test_edit_result_round_robin(client: TestClient) -> None:
     assert r.status_code == 409
 
 
+def test_edit_result_empty_round_scores_rejected(client: TestClient) -> None:
+    t, d, pa, pb = _setup(client)
+    matches = client.get(f"/api/v1/divisions/{d['id']}/matches").json()
+    r = client.post(
+        f"/api/v1/matches/{matches[0]['id']}/edit-result",
+        json={"round_scores": []},
+    )
+    assert r.status_code == 422
+
+
 def test_edit_result_blocked_for_non_round_robin_division(client: TestClient) -> None:
     t, d, pa, pb = _setup(client)
     # Force division to play_ins state

@@ -66,9 +66,8 @@ def demo_active_with_judge(db_session):
     )
     t = r.json()
     c.post(f"/api/v1/tournaments/{t['id']}/lifecycle", json={"state": "active"})
-    # Note: judge creation route will be registered in Task 9, but the BDD scenario
-    # only checks that after reset, GET /judges returns []. Skip judge creation here.
-    return {"client": c, "tournament": t}
+    judge_r = c.post(f"/api/v1/tournaments/{t['id']}/judges", json={"name": "Judge A"})
+    return {"client": c, "tournament": t, "judge": judge_r.json()}
 
 
 @given("a non-demo tournament in active state", target_fixture="ctx")
@@ -121,9 +120,9 @@ def assert_setup(ctx):
 
 @then("the judge is soft-deleted")
 def assert_judge_gone(ctx):
-    # Judge route registered in Task 9; skip validation here if route doesn't exist yet
-    # The reset service's correctness is covered by test_demo_reset in test_tournaments.py
-    pass
+    r = ctx["client"].get(f"/api/v1/tournaments/{ctx['tournament']['id']}/judges")
+    assert r.status_code == 200
+    assert r.json() == [], f"Expected no judges after reset, got: {r.json()}"
 
 
 @then("modifying custom_participant_fields returns 409")
