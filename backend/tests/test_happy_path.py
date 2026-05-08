@@ -5,6 +5,8 @@ Covers the complete admin flow:
   generate-round-robin → reorder → edit-result → activity log present
 """
 
+import uuid
+
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -14,7 +16,7 @@ def test_full_happy_path(client: TestClient, db_session: Session) -> None:
     # ------------------------------------------------------------------
     # 1. Create tournament
     # ------------------------------------------------------------------
-    t = client.post(
+    r = client.post(
         "/api/v1/tournaments",
         json={
             "name": "Grand Prix",
@@ -24,14 +26,18 @@ def test_full_happy_path(client: TestClient, db_session: Session) -> None:
             "round_length_seconds": 90,
             "slideshow_slide_seconds": 8,
         },
-    ).json()
+    )
+    assert r.status_code == 201
+    t = r.json()
     assert t["lifecycle_state"] == "setup"
     tid = t["id"]
 
     # ------------------------------------------------------------------
     # 2. Add a judge
     # ------------------------------------------------------------------
-    judge = client.post(f"/api/v1/tournaments/{tid}/judges", json={"name": "Judge Ana"}).json()
+    r = client.post(f"/api/v1/tournaments/{tid}/judges", json={"name": "Judge Ana"})
+    assert r.status_code == 201
+    judge = r.json()
     assert len(judge["code"]) == 8
 
     # ------------------------------------------------------------------
@@ -39,17 +45,21 @@ def test_full_happy_path(client: TestClient, db_session: Session) -> None:
     # ------------------------------------------------------------------
     participants = []
     for name in ["Alice", "Bob", "Carol", "Dave"]:
-        p = client.post(
+        r = client.post(
             f"/api/v1/tournaments/{tid}/participants",
             json={"name": name, "custom_fields": {}},
-        ).json()
+        )
+        assert r.status_code == 201
+        p = r.json()
         assert p["name"] == name
         participants.append(p)
 
     # ------------------------------------------------------------------
     # 4. Create a division and assign all 4 participants
     # ------------------------------------------------------------------
-    div = client.post(f"/api/v1/tournaments/{tid}/divisions", json={"name": "Open"}).json()
+    r = client.post(f"/api/v1/tournaments/{tid}/divisions", json={"name": "Open"})
+    assert r.status_code == 201
+    div = r.json()
     assert div["state"] == "setup"
     for p in participants:
         r = client.post(
@@ -94,9 +104,9 @@ def test_full_happy_path(client: TestClient, db_session: Session) -> None:
         text(
             "INSERT INTO match_rounds (id, match_id, round_number, competitor_a_score, "
             "competitor_b_score, state) "
-            "VALUES (gen_random_uuid(), :mid, 1, 5, 3, 'completed')"
+            "VALUES (:rid, :mid, 1, 5, 3, 'completed')"
         ),
-        {"mid": match_id},
+        {"rid": str(uuid.uuid4()), "mid": match_id},
     )
     db_session.commit()
 
