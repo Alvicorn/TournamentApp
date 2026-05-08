@@ -16,3 +16,9 @@ Feature: Tournament lifecycle transitions
     Given a non-demo tournament in active state
     When the admin attempts to reset the tournament
     Then a 409 error is returned with detail containing "demo"
+
+  Scenario: Completing a tournament blocks participant updates
+    Given a tournament in active state with a participant
+    When the admin completes the tournament
+    And admin attempts to update the participant
+    Then a 409 error is returned with TOURNAMENT_COMPLETED detail

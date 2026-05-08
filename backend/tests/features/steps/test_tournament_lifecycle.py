@@ -139,3 +139,57 @@ def assert_frozen(ctx):
 def assert_409_demo(ctx):
     assert ctx["response"].status_code == 409
     assert "demo" in ctx["response"].json()["detail"].lower()
+
+
+@scenario(
+    "tournament_lifecycle.feature",
+    "Completing a tournament blocks participant updates",
+)
+def test_completed_blocks_updates(): ...
+
+
+@given("a tournament in active state with a participant", target_fixture="ctx")
+def active_with_participant(db_session):
+    c = _make_client(db_session)
+    r = c.post(
+        "/api/v1/tournaments",
+        json={
+            "name": "T",
+            "competition_date": "2026-06-01",
+            "time_zone": "UTC",
+            "rounds_per_match": 2,
+            "round_length_seconds": 60,
+            "slideshow_slide_seconds": 8,
+        },
+    )
+    assert r.status_code == 201
+    t = r.json()
+    c.post(f"/api/v1/tournaments/{t['id']}/lifecycle", json={"state": "active"})
+    p_r = c.post(
+        f"/api/v1/tournaments/{t['id']}/participants",
+        json={"name": "Alice", "custom_fields": {}},
+    )
+    assert p_r.status_code == 201
+    return {"client": c, "tournament": t, "participant": p_r.json()}
+
+
+@when("the admin completes the tournament")
+def complete_tournament(ctx):
+    ctx["client"].post(
+        f"/api/v1/tournaments/{ctx['tournament']['id']}/lifecycle",
+        json={"state": "completed"},
+    )
+
+
+@when("admin attempts to update the participant")
+def attempt_update_participant(ctx):
+    ctx["response"] = ctx["client"].patch(
+        f"/api/v1/participants/{ctx['participant']['id']}",
+        json={"name": "Updated Name"},
+    )
+
+
+@then("a 409 error is returned with TOURNAMENT_COMPLETED detail")
+def assert_tournament_completed_409(ctx):
+    assert ctx["response"].status_code == 409
+    assert "TOURNAMENT_COMPLETED" in ctx["response"].json()["detail"]

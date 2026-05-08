@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models.activity_log import ActorType
 from app.models.participant import Participant
+from app.models.tournament import LifecycleState
 from app.schemas.participant import ParticipantCreate, ParticipantUpdate
 from app.services import activity_log as al
 from app.services.tournament import get_tournament_or_404
@@ -72,6 +73,15 @@ def update_participant(
     actor_email: str,
 ) -> Participant:
     p = _get_participant_or_404(db, participant_id)
+
+    # Block updates once the tournament is completed
+    t = get_tournament_or_404(db, p.tournament_id)
+    if t.lifecycle_state == LifecycleState.completed:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "TOURNAMENT_COMPLETED: participant updates are not allowed after tournament completion",
+        )
+
     data = body.model_dump(exclude_unset=True)
     for key, value in data.items():
         setattr(p, key, value)
