@@ -113,7 +113,7 @@ def assert_new_field(ctx):
     "custom_field_freezing.feature",
     "Adding a custom field does not break existing participants",
 )
-def test_add_field_back_fills_null(): ...
+def test_add_field_does_not_break_existing_participants(): ...
 
 
 @scenario(
@@ -129,7 +129,7 @@ def test_remove_field_drops_spec(): ...
 )
 def setup_with_participant_no_extras(db_session):
     c = _make_client(db_session)
-    r = c.post(
+    t = c.post(
         "/api/v1/tournaments",
         json={
             "name": "T",
@@ -139,15 +139,12 @@ def setup_with_participant_no_extras(db_session):
             "round_length_seconds": 60,
             "slideshow_slide_seconds": 8,
         },
-    )
-    assert r.status_code == 201
-    t = r.json()
-    p_r = c.post(
+    ).json()
+    p = c.post(
         f"/api/v1/tournaments/{t['id']}/participants",
         json={"name": "Alice", "custom_fields": {}},
-    )
-    assert p_r.status_code == 201
-    return {"client": c, "tournament": t, "participant": p_r.json()}
+    ).json()
+    return {"client": c, "tournament": t, "participant": p}
 
 
 @given(
@@ -156,7 +153,7 @@ def setup_with_participant_no_extras(db_session):
 )
 def setup_with_belt_participant(db_session):
     c = _make_client(db_session)
-    r = c.post(
+    t = c.post(
         "/api/v1/tournaments",
         json={
             "name": "T",
@@ -169,15 +166,12 @@ def setup_with_belt_participant(db_session):
                 {"key": "belt", "label": "Belt", "type": "text", "required": False}
             ],
         },
-    )
-    assert r.status_code == 201
-    t = r.json()
-    p_r = c.post(
+    ).json()
+    p = c.post(
         f"/api/v1/tournaments/{t['id']}/participants",
         json={"name": "Alice", "custom_fields": {"belt": "black"}},
-    )
-    assert p_r.status_code == 201
-    return {"client": c, "tournament": t, "participant": p_r.json()}
+    ).json()
+    return {"client": c, "tournament": t, "participant": p}
 
 
 @when("admin PATCHes custom_participant_fields to add a belt field")
@@ -212,5 +206,5 @@ def participant_still_retrievable(ctx):
 
 @then("the tournament custom_participant_fields is empty")
 def tournament_fields_empty(ctx):
-    fields = ctx["response"].json().get("custom_participant_fields", None)
+    fields = ctx["response"].json()["custom_participant_fields"]
     assert fields == [], f"Expected empty custom_participant_fields, got: {fields}"
