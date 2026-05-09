@@ -16,7 +16,7 @@ from app.services.tournament import get_tournament_or_404
 
 def _generate_unique_code(db: Session, tournament_id: UUID) -> str:
     """Generate a code that doesn't already exist for this tournament."""
-    for _ in range(10):  # practically always succeeds on first try
+    for _ in range(10):
         code = generate_judge_code()
         exists = db.execute(
             select(Judge).where(

@@ -7,6 +7,7 @@ export type CustomFieldSpec = {
   required: boolean;
 };
 
+
 export type Tournament = {
   id: string;
   name: string;
@@ -21,6 +22,7 @@ export type Tournament = {
   custom_participant_fields: CustomFieldSpec[];
 };
 
+
 export type Judge = {
   id: string;
   tournament_id: string;
@@ -28,6 +30,7 @@ export type Judge = {
   code: string;
   created_at: string;
 };
+
 
 export type Participant = {
   id: string;
@@ -37,6 +40,7 @@ export type Participant = {
   custom_fields: Record<string, string | number | null>;
   is_withdrawn: boolean;
 };
+
 
 export type DivisionState =
   | "setup"
