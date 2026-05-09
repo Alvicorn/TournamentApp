@@ -347,7 +347,7 @@ export default function AdminDivisionDetail() {
             </button>
           )}
         </div>
-        {division.paused_reason && (
+        {division.paused_reason && isPaused && (
           <p className="mt-2 text-sm text-yellow-700">
             Paused: {division.paused_reason}
           </p>

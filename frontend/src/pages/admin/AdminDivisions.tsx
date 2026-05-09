@@ -171,7 +171,7 @@ export default function AdminDivisions() {
                   <StateBadge value={div.state} />
                 </div>
               )}
-              {div.paused_reason && (
+              {div.paused_reason && div.state === "paused" && (
                 <p className="text-xs text-yellow-700">
                   Paused: {div.paused_reason}
                 </p>
