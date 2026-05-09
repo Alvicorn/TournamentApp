@@ -228,8 +228,10 @@ export default function AdminParticipants() {
                 ) : (
                   <tr key={p.id}>
                     <td className="px-4 py-2 font-medium text-slate-800">{p.name}</td>
-                    <td className="px-4 py-2 text-slate-500">
-                      {p.division_id ? (divisionNameMap[p.division_id] ?? p.division_id) : "—"}
+                    <td className="px-4 py-2">
+                      {p.division_id
+                        ? <span className="text-slate-500">{divisionNameMap[p.division_id] ?? p.division_id}</span>
+                        : <span className="text-xs italic text-slate-400">Unassigned</span>}
                     </td>
                     {specs.map((s) => (
                       <td key={s.key} className="px-4 py-2 text-slate-600">

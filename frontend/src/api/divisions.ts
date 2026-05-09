@@ -108,6 +108,24 @@ export function useMoveParticipant(tournamentId: string, divisionId: string) {
   });
 }
 
+export function useRemoveParticipantFromDivision(tournamentId: string, divisionId: string) {
+  const { token } = useAuthStore();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (participantId: string) =>
+      apiFetch<void>(`/api/v1/divisions/${divisionId}/remove-participant`, {
+        method: "POST",
+        body: { participant_id: participantId },
+        token: token ?? "",
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["divisions", tournamentId] });
+      qc.invalidateQueries({ queryKey: ["participants", tournamentId] });
+    },
+  });
+}
+
+
 export function useGenerateRoundRobin(tournamentId: string, divisionId: string) {
   const { token } = useAuthStore();
   const qc = useQueryClient();

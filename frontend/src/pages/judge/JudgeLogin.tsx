@@ -14,7 +14,7 @@ export default function JudgeLogin() {
   const navigate = useNavigate();
 
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.toUpperCase().replace(/[^23456789ABCDEFGHJKLMNPQRSTUVWXYZ-]/g, "");
+    const raw = e.target.value.toUpperCase().replace(/[^23456789ABCDEFGHJKMNPQRSTUVWXYZ-]/g, "");
     setCode(format_judge_code(raw));
   }
 

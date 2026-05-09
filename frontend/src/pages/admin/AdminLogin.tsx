@@ -25,6 +25,7 @@ export default function AdminLogin() {
         method: "POST",
         body: { email, password },
       });
+      console.log(data)
       setAdmin(data.access_token, data.user.id);
       navigate("/admin");
     } catch {

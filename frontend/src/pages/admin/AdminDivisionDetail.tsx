@@ -10,9 +10,10 @@ import {
   useDivisions,
   useGenerateRoundRobin,
   useMoveParticipant,
+  useRemoveParticipantFromDivision,
   useUpdateDivision,
 } from "../../api/divisions";
-import { useParticipants, useUpdateParticipant } from "../../api/participants";
+import { useParticipants } from "../../api/participants";
 import { useEditResult, useMatches, useReorderMatches } from "../../api/matches";
 import type { Match, MatchRound } from "../../api/types";
 
@@ -38,7 +39,7 @@ export default function AdminDivisionDetail() {
   const updateDivision = useUpdateDivision(tournamentId);
   const reorderMatches = useReorderMatches(divisionId, tournamentId);
   const editResult = useEditResult(divisionId, tournamentId);
-  const removeFromDivision = useUpdateParticipant(tournamentId);
+  const removeFromDivision = useRemoveParticipantFromDivision(tournamentId, divisionId);
 
   const [selectedAssign, setSelectedAssign] = useState("");
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
@@ -198,10 +199,7 @@ export default function AdminDivisionDetail() {
                     <button
                       onClick={async () => {
                         try {
-                          await removeFromDivision.mutateAsync({
-                            id: p.id,
-                            body: { division_id: null },
-                          });
+                          await removeFromDivision.mutateAsync(p.id);
                           addToast("Participant removed from division", "success");
                         } catch {
                           addToast("Failed to remove participant from division", "error");
