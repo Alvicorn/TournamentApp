@@ -39,4 +39,5 @@ cd frontend && pnpm test
 
 ## Environment
 
+
 Copy `.env.example` files in `backend/` and `frontend/` and fill in. See [`docs/infra/deployment.md`](docs/infra/deployment.md#environment-configuration).
