@@ -13,6 +13,7 @@ from app.schemas.division import (
     DivisionOut,
     DivisionUpdate,
     MoveParticipantBody,
+    RemoveParticipantBody,
 )
 from app.services import division as svc
 
@@ -56,6 +57,15 @@ def update_division(
     )
 
 
+@router.delete("/divisions/{division_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_division(
+    division_id: UUID,
+    admin: AdminUser,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> None:
+    svc.delete_division(db, division_id, actor_id=admin.user_id, actor_email=admin.email)
+
+
 @router.post("/divisions/{division_id}/assign-participant", response_model=None)
 def assign_participant(
     division_id: UUID,
@@ -74,6 +84,16 @@ def move_participant(
     db: Session = Depends(get_db),  # noqa: B008
 ) -> None:
     svc.move_participant(db, division_id, body, actor_id=admin.user_id, actor_email=admin.email)
+
+
+@router.post("/divisions/{division_id}/remove-participant", status_code=status.HTTP_204_NO_CONTENT)
+def remove_participant(
+    division_id: UUID,
+    body: RemoveParticipantBody,
+    admin: AdminUser,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> None:
+    svc.remove_participant(db, division_id, body, actor_id=admin.user_id, actor_email=admin.email)
 
 
 @router.post("/divisions/{division_id}/generate-round-robin", response_model=DivisionOut)

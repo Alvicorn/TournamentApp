@@ -10,7 +10,7 @@ Feature: Tournament lifecycle transitions
     Given a demo tournament in active state with a judge
     When the admin resets the tournament
     Then the lifecycle state is setup
-    And the judge is soft-deleted
+    And the judge is removed
 
   Scenario: Non-demo tournament cannot be reset
     Given a non-demo tournament in active state

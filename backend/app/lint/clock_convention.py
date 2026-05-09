@@ -3,10 +3,10 @@
 Rules (see ``docs/engineering/correctness.md#timer-authority``):
 
 1. No ``datetime.utcnow`` or ``datetime.now`` calls in ``app/`` (except this
-   file's own helper text and ``app/models/base.py`` where the soft-delete
-   fallback documents the exception).
+   file's own helper text and ``app/auth/judge.py`` where JWT iat/exp use
+   Python time intentionally).
 2. Every ``DateTime`` mapped column must carry ``server_default=func.now()``
-   (or be explicitly nullable, e.g. ``deleted_at``).
+   or be explicitly nullable.
 
 Invoked via ``python -m app.lint.clock_convention`` and from CI. Returns
 non-zero exit code on violation.
@@ -21,7 +21,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2] / "app"
 
 ALLOWED_DATETIME_FILES = {
-    Path("models/base.py"),  # soft-delete Python fallback documents the exception
     Path("auth/judge.py"),  # JWT iat/exp use Python time intentionally (not a DB clock)
     Path("lint/clock_convention.py"),
 }

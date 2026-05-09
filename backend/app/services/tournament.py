@@ -17,9 +17,8 @@ from app.services import activity_log as al
 
 
 def get_active_tournament(db: Session) -> Tournament:
-    """Return the single non-demo, non-completed, non-deleted tournament, or raise 404."""
+    """Return the single non-demo, non-completed tournament, or raise 404."""
     stmt = select(Tournament).where(
-        Tournament.deleted_at.is_(None),
         Tournament.is_demo.is_(False),
         Tournament.lifecycle_state != LifecycleState.completed,
     )
@@ -32,7 +31,6 @@ def get_active_tournament(db: Session) -> Tournament:
 def get_tournament_or_404(db: Session, tournament_id: UUID) -> Tournament:
     stmt = select(Tournament).where(
         Tournament.id == tournament_id,
-        Tournament.deleted_at.is_(None),
     )
     t = db.execute(stmt).scalar_one_or_none()
     if t is None:
@@ -55,7 +53,6 @@ def create_tournament(
     if not body.is_demo:
         conflict = db.execute(
             select(Tournament).where(
-                Tournament.deleted_at.is_(None),
                 Tournament.is_demo.is_(False),
                 Tournament.lifecycle_state != LifecycleState.completed,
             )
@@ -169,37 +166,7 @@ def delete_tournament(
     actor_id: str,
     actor_email: str,
 ) -> None:
-    t = get_tournament_or_404(db, tournament_id)
-    al.write(
-        db,
-        tournament_id=tournament_id,
-        actor_type=ActorType.admin,
-        actor_id=UUID(actor_id),
-        actor_display_name=actor_email,
-        action="tournament.deleted",
-        description=f"Tournament '{t.name}' deleted",
-    )
-    db.execute(
-        text("UPDATE tournaments SET deleted_at = now() WHERE id = :id"),
-        {"id": tournament_id},
-    )
-    db.commit()
-
-
-def reset_tournament(
-    db: Session,
-    tournament_id: UUID,
-    actor_id: str,
-    actor_email: str,
-) -> Tournament:
-    t = get_tournament_or_404(db, tournament_id)
-    if not t.is_demo:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            "Only demo tournaments can be reset",
-        )
-
-    # Hard-delete score_events and match_rounds (no deleted_at column on these tables)
+    get_tournament_or_404(db, tournament_id)
     db.execute(
         text(
             "DELETE FROM score_events WHERE match_id IN "
@@ -216,30 +183,69 @@ def reset_tournament(
         ),
         {"tid": tournament_id},
     )
-    # Soft-delete matches, participants, judges, divisions
     db.execute(
         text(
-            "UPDATE matches SET deleted_at = now() "
-            "WHERE division_id IN (SELECT id FROM divisions WHERE tournament_id = :tid)"
+            "DELETE FROM matches WHERE division_id IN "
+            "(SELECT id FROM divisions WHERE tournament_id = :tid)"
         ),
         {"tid": tournament_id},
     )
-    # Hard-delete activity_log (append-only, no deleted_at)
     db.execute(text("DELETE FROM activity_log WHERE tournament_id = :tid"), {"tid": tournament_id})
     db.execute(
+        text("UPDATE participants SET division_id = NULL WHERE tournament_id = :tid"),
+        {"tid": tournament_id},
+    )
+    db.execute(text("DELETE FROM participants WHERE tournament_id = :tid"), {"tid": tournament_id})
+    db.execute(text("DELETE FROM judges WHERE tournament_id = :tid"), {"tid": tournament_id})
+    db.execute(text("DELETE FROM divisions WHERE tournament_id = :tid"), {"tid": tournament_id})
+    db.execute(text("DELETE FROM tournaments WHERE id = :id"), {"id": tournament_id})
+    db.commit()
+
+
+def reset_tournament(
+    db: Session,
+    tournament_id: UUID,
+    actor_id: str,
+    actor_email: str,
+) -> Tournament:
+    t = get_tournament_or_404(db, tournament_id)
+    if not t.is_demo:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Only demo tournaments can be reset",
+        )
+
+    db.execute(
         text(
-            "UPDATE participants SET deleted_at = now(), division_id = NULL WHERE tournament_id = :tid"
+            "DELETE FROM score_events WHERE match_id IN "
+            "(SELECT id FROM matches WHERE division_id IN "
+            "  (SELECT id FROM divisions WHERE tournament_id = :tid))"
         ),
         {"tid": tournament_id},
     )
     db.execute(
-        text("UPDATE judges SET deleted_at = now() WHERE tournament_id = :tid"),
+        text(
+            "DELETE FROM match_rounds WHERE match_id IN "
+            "(SELECT id FROM matches WHERE division_id IN "
+            "  (SELECT id FROM divisions WHERE tournament_id = :tid))"
+        ),
         {"tid": tournament_id},
     )
     db.execute(
-        text("UPDATE divisions SET deleted_at = now() WHERE tournament_id = :tid"),
+        text(
+            "DELETE FROM matches WHERE division_id IN "
+            "(SELECT id FROM divisions WHERE tournament_id = :tid)"
+        ),
         {"tid": tournament_id},
     )
+    db.execute(text("DELETE FROM activity_log WHERE tournament_id = :tid"), {"tid": tournament_id})
+    db.execute(
+        text("UPDATE participants SET division_id = NULL WHERE tournament_id = :tid"),
+        {"tid": tournament_id},
+    )
+    db.execute(text("DELETE FROM participants WHERE tournament_id = :tid"), {"tid": tournament_id})
+    db.execute(text("DELETE FROM judges WHERE tournament_id = :tid"), {"tid": tournament_id})
+    db.execute(text("DELETE FROM divisions WHERE tournament_id = :tid"), {"tid": tournament_id})
 
     t.lifecycle_state = LifecycleState.setup
     t.custom_participant_fields = []

@@ -55,7 +55,7 @@ def test_update_participant(client: TestClient) -> None:
     assert r.json()["name"] == "Alicia"
 
 
-def test_delete_participant_no_matches_soft_deletes(client: TestClient) -> None:
+def test_delete_participant_no_matches_removes(client: TestClient) -> None:
     t = _tournament(client)
     p = _participant(client, t["id"])
     r = client.delete(f"/api/v1/participants/{p['id']}")

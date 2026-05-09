@@ -13,7 +13,6 @@ from app.config import get_settings
 # ---------------------------------------------------------------------------
 supabase: Client = create_client(get_settings().supabase_url, get_settings().supabase_key)
 
-
 # ---------------------------------------------------------------------------
 # SQLAlchemy (sync) — used by all Phase 2+ services
 # ---------------------------------------------------------------------------

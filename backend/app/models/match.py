@@ -9,7 +9,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, SoftDeleteMixin, uuid_pk
+from app.models.base import Base, uuid_pk
 
 
 class MatchPhase(enum.StrEnum):
@@ -35,7 +35,7 @@ class RoundState(enum.StrEnum):
     completed = "completed"
 
 
-class Match(Base, SoftDeleteMixin):
+class Match(Base):
     __tablename__ = "matches"
 
     id: Mapped[UUID] = uuid_pk()

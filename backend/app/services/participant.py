@@ -48,7 +48,6 @@ def list_participants(db: Session, tournament_id: UUID) -> list[Participant]:
     get_tournament_or_404(db, tournament_id)
     stmt = select(Participant).where(
         Participant.tournament_id == tournament_id,
-        Participant.deleted_at.is_(None),
     )
     return list(db.execute(stmt).scalars())
 
@@ -57,7 +56,6 @@ def _get_participant_or_404(db: Session, participant_id: UUID) -> Participant:
     p = db.execute(
         select(Participant).where(
             Participant.id == participant_id,
-            Participant.deleted_at.is_(None),
         )
     ).scalar_one_or_none()
     if p is None:
@@ -115,7 +113,6 @@ def delete_participant(
     has_matches = db.execute(
         select(Match).where(
             (Match.competitor_a_id == participant_id) | (Match.competitor_b_id == participant_id),
-            Match.deleted_at.is_(None),
         )
     ).scalar_one_or_none()
 
@@ -125,7 +122,7 @@ def delete_participant(
         desc = f"Participant '{p.name}' marked as withdrawn"
     else:
         db.execute(
-            text("UPDATE participants SET deleted_at = now() WHERE id = :id"),
+            text("DELETE FROM participants WHERE id = :id"),
             {"id": participant_id},
         )
         action = "participant.removed"

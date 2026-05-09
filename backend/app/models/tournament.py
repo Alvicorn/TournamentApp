@@ -10,7 +10,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, SoftDeleteMixin, TimestampMixin, uuid_pk
+from app.models.base import Base, TimestampMixin, uuid_pk
 
 
 class LifecycleState(enum.StrEnum):
@@ -19,7 +19,7 @@ class LifecycleState(enum.StrEnum):
     completed = "completed"
 
 
-class Tournament(Base, TimestampMixin, SoftDeleteMixin):
+class Tournament(Base, TimestampMixin):
     __tablename__ = "tournaments"
 
     id: Mapped[UUID] = uuid_pk()

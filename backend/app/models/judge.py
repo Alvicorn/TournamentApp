@@ -7,10 +7,10 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Text, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, SoftDeleteMixin, uuid_pk
+from app.models.base import Base, uuid_pk
 
 
-class Judge(Base, SoftDeleteMixin):
+class Judge(Base):
     __tablename__ = "judges"
 
     id: Mapped[UUID] = uuid_pk()

@@ -22,7 +22,6 @@ def _generate_unique_code(db: Session, tournament_id: UUID) -> str:
             select(Judge).where(
                 Judge.tournament_id == tournament_id,
                 Judge.code == code,
-                Judge.deleted_at.is_(None),
             )
         ).scalar_one_or_none()
         if exists is None:
@@ -61,7 +60,6 @@ def list_judges(db: Session, tournament_id: UUID) -> list[Judge]:
     get_tournament_or_404(db, tournament_id)
     stmt = select(Judge).where(
         Judge.tournament_id == tournament_id,
-        Judge.deleted_at.is_(None),
     )
     return list(db.execute(stmt).scalars())
 
@@ -72,9 +70,7 @@ def delete_judge(
     actor_id: str,
     actor_email: str,
 ) -> None:
-    judge = db.execute(
-        select(Judge).where(Judge.id == judge_id, Judge.deleted_at.is_(None))
-    ).scalar_one_or_none()
+    judge = db.execute(select(Judge).where(Judge.id == judge_id)).scalar_one_or_none()
     if judge is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Judge not found")
 
@@ -86,18 +82,22 @@ def delete_judge(
         select(Match).where(
             Match.assigned_judge_id == judge_id,
             Match.state.in_([MatchState.in_progress, MatchState.paused, MatchState.pending_review]),
-            Match.deleted_at.is_(None),
         )
     ).scalar_one_or_none()
 
     action = "judge.removed"
     if active_match:
         active_match.state = MatchState.paused
-        active_match.assigned_judge_id = None
         action = "judge.removed_active"
+    db.flush()  # apply ORM state change before SQL
 
+    # Unassign judge from all matches (FK constraint requires no references before deletion)
     db.execute(
-        text("UPDATE judges SET deleted_at = now(), current_session_jti = NULL WHERE id = :id"),
+        text("UPDATE matches SET assigned_judge_id = NULL WHERE assigned_judge_id = :id"),
+        {"id": judge_id},
+    )
+    db.execute(
+        text("DELETE FROM judges WHERE id = :id"),
         {"id": judge_id},
     )
     al.write(

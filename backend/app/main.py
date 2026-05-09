@@ -45,7 +45,6 @@ async def _hourly_backup_loop() -> None:
             try:
                 active = db.execute(
                     select(Tournament).where(
-                        Tournament.deleted_at.is_(None),
                         Tournament.is_demo.is_(False),
                         Tournament.lifecycle_state == LifecycleState.active,
                     )

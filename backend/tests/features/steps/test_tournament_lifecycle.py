@@ -118,7 +118,7 @@ def assert_setup(ctx):
     assert ctx["response"].json()["lifecycle_state"] == "setup"
 
 
-@then("the judge is soft-deleted")
+@then("the judge is removed")
 def assert_judge_gone(ctx):
     r = ctx["client"].get(f"/api/v1/tournaments/{ctx['tournament']['id']}/judges")
     assert r.status_code == 200

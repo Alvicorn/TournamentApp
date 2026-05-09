@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.models.activity_log import ActorType
@@ -15,6 +15,7 @@ from app.schemas.division import (
     DivisionCreate,
     DivisionUpdate,
     MoveParticipantBody,
+    RemoveParticipantBody,
 )
 from app.services import activity_log as al
 from app.services.round_robin import generate_round_robin
@@ -26,9 +27,7 @@ from app.services.tournament import get_tournament_or_404
 
 
 def _get_division_or_404(db: Session, division_id: UUID) -> Division:
-    d = db.execute(
-        select(Division).where(Division.id == division_id, Division.deleted_at.is_(None))
-    ).scalar_one_or_none()
+    d = db.execute(select(Division).where(Division.id == division_id)).scalar_one_or_none()
     if d is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Division not found")
     return d
@@ -64,11 +63,7 @@ def create_division(
 def list_divisions(db: Session, tournament_id: UUID) -> list[Division]:
     get_tournament_or_404(db, tournament_id)
     return list(
-        db.execute(
-            select(Division).where(
-                Division.tournament_id == tournament_id, Division.deleted_at.is_(None)
-            )
-        ).scalars()
+        db.execute(select(Division).where(Division.tournament_id == tournament_id)).scalars()
     )
 
 
@@ -100,6 +95,77 @@ def update_division(
     return d
 
 
+def delete_division(
+    db: Session,
+    division_id: UUID,
+    actor_id: str,
+    actor_email: str,
+) -> None:
+    division = _get_division_or_404(db, division_id)
+
+    # prevent deletion with active matches
+    from app.models.match import Match, MatchState
+
+    active_match = db.execute(
+        select(Match).where(
+            Match.division_id == division_id,
+            Match.state.in_([MatchState.in_progress, MatchState.paused, MatchState.pending_review]),
+        )
+    ).scalar_one_or_none()
+    if active_match:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Active match in division")
+
+    # move participants out of the division
+    db.execute(
+        text("UPDATE participants SET division_id = NULL WHERE division_id = :id"),
+        {"id": division_id},
+    )
+
+    # delete score_events and match_rounds for matches in this division
+    db.execute(
+        text(
+            "DELETE FROM score_events WHERE match_id IN "
+            "(SELECT id FROM matches WHERE division_id = :id)"
+        ),
+        {"id": division_id},
+    )
+    db.execute(
+        text(
+            "DELETE FROM match_rounds WHERE match_id IN "
+            "(SELECT id FROM matches WHERE division_id = :id)"
+        ),
+        {"id": division_id},
+    )
+
+    # delete all matches in the division
+    db.execute(
+        text("DELETE FROM matches WHERE division_id = :id"),
+        {"id": division_id},
+    )
+    db.execute(
+        text("UPDATE activity_log SET division_id = NULL WHERE division_id = :id"),
+        {"id": division_id},
+    )
+
+    # delete division
+    db.execute(
+        text("DELETE FROM divisions WHERE id = :id"),
+        {"id": division_id},
+    )
+
+    al.write(
+        db,
+        tournament_id=division.tournament_id,
+        actor_type=ActorType.admin,
+        actor_id=UUID(actor_id),
+        actor_display_name=actor_email,
+        action="division.removed",
+        description=f"Division '{division.name}' removed",
+        metadata={"division_id": str(division_id), "had_active_match": active_match is not None},
+    )
+    db.commit()
+
+
 # ---------------------------------------------------------------------------
 # Participant assignment
 # ---------------------------------------------------------------------------
@@ -118,7 +184,6 @@ def assign_participant(
     p = db.execute(
         select(Participant).where(
             Participant.id == body.participant_id,
-            Participant.deleted_at.is_(None),
         )
     ).scalar_one_or_none()
     if p is None:
@@ -152,7 +217,6 @@ def assign_participant(
                     Participant.division_id == division_id,
                     Participant.id != body.participant_id,
                     Participant.is_withdrawn.is_(False),
-                    Participant.deleted_at.is_(None),
                 )
             ).scalars()
         )
@@ -160,9 +224,7 @@ def assign_participant(
         if existing:
             max_order = (
                 db.execute(
-                    select(func.max(Match.order_index)).where(
-                        Match.division_id == division_id, Match.deleted_at.is_(None)
-                    )
+                    select(func.max(Match.order_index)).where(Match.division_id == division_id)
                 ).scalar()
                 or -1
             )
@@ -227,7 +289,6 @@ def move_participant(
         select(Participant).where(
             Participant.id == body.participant_id,
             Participant.division_id == division_id,
-            Participant.deleted_at.is_(None),
         )
     ).scalar_one_or_none()
     if p is None:
@@ -247,6 +308,45 @@ def move_participant(
             "from_division_id": str(division_id),
             "to_division_id": str(body.target_division_id),
         },
+    )
+    db.commit()
+
+
+def remove_participant(
+    db: Session,
+    division_id: UUID,
+    body: RemoveParticipantBody,
+    actor_id: str,
+    actor_email: str,
+) -> None:
+    d = _get_division_or_404(db, division_id)
+
+    if d.state != DivisionState.setup:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "DIVISION_NOT_IN_SETUP: participants can only be removed while the division is in setup state",
+        )
+
+    p = db.execute(
+        select(Participant).where(
+            Participant.id == body.participant_id,
+            Participant.division_id == division_id,
+        )
+    ).scalar_one_or_none()
+    if p is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Participant not found in this division")
+
+    p.division_id = None
+    al.write(
+        db,
+        tournament_id=d.tournament_id,
+        division_id=division_id,
+        actor_type=ActorType.admin,
+        actor_id=UUID(actor_id),
+        actor_display_name=actor_email,
+        action="participant.removed_from_division",
+        description=f"Participant '{p.name}' removed from division '{d.name}'",
+        metadata={"participant_id": str(body.participant_id)},
     )
     db.commit()
 
@@ -275,7 +375,6 @@ def generate_division_round_robin(
             select(Participant).where(
                 Participant.division_id == division_id,
                 Participant.is_withdrawn.is_(False),
-                Participant.deleted_at.is_(None),
             )
         ).scalars()
     )

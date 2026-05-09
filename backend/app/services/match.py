@@ -14,18 +14,14 @@ from app.services import activity_log as al
 
 
 def _get_match_or_404(db: Session, match_id: UUID) -> Match:
-    m = db.execute(
-        select(Match).where(Match.id == match_id, Match.deleted_at.is_(None))
-    ).scalar_one_or_none()
+    m = db.execute(select(Match).where(Match.id == match_id)).scalar_one_or_none()
     if m is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Match not found")
     return m
 
 
 def _get_division_or_404(db: Session, division_id: UUID) -> Division:
-    d = db.execute(
-        select(Division).where(Division.id == division_id, Division.deleted_at.is_(None))
-    ).scalar_one_or_none()
+    d = db.execute(select(Division).where(Division.id == division_id)).scalar_one_or_none()
     if d is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Division not found")
     return d
@@ -35,9 +31,7 @@ def list_matches(db: Session, division_id: UUID) -> list[Match]:
     _get_division_or_404(db, division_id)
     return list(
         db.execute(
-            select(Match)
-            .where(Match.division_id == division_id, Match.deleted_at.is_(None))
-            .order_by(Match.order_index)
+            select(Match).where(Match.division_id == division_id).order_by(Match.order_index)
         ).scalars()
     )
 
@@ -53,7 +47,7 @@ def reorder_matches(
 
     # Validate: all active matches in the division must be included
     active_count = db.execute(
-        select(func.count()).where(Match.division_id == division_id, Match.deleted_at.is_(None))
+        select(func.count()).where(Match.division_id == division_id)
     ).scalar_one()
     if len(body.ordered_match_ids) != active_count:
         raise HTTPException(
@@ -66,7 +60,6 @@ def reorder_matches(
             select(Match).where(
                 Match.id == match_id,
                 Match.division_id == division_id,
-                Match.deleted_at.is_(None),
             )
         ).scalar_one_or_none()
         if m is None:

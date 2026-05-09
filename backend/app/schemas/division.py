@@ -26,6 +26,10 @@ class MoveParticipantBody(BaseModel):
     target_division_id: UUID
 
 
+class RemoveParticipantBody(BaseModel):
+    participant_id: UUID
+
+
 class DivisionOut(BaseModel):
     id: UUID
     tournament_id: UUID
