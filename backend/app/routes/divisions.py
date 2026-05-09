@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import AdminUser
 from app.db import get_db
+from app.models.division import Division
 from app.schemas.division import (
     AssignParticipantBody,
     DivisionCreate,
@@ -30,7 +31,7 @@ def create_division(
     body: DivisionCreate,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> DivisionOut:
+) -> Division:
     return svc.create_division(
         db, tournament_id, body, actor_id=admin.user_id, actor_email=admin.email
     )
@@ -41,7 +42,7 @@ def list_divisions(
     tournament_id: UUID,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> list[DivisionOut]:
+) -> list[Division]:
     return svc.list_divisions(db, tournament_id)
 
 
@@ -51,7 +52,7 @@ def update_division(
     body: DivisionUpdate,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> DivisionOut:
+) -> Division:
     return svc.update_division(
         db, division_id, body, actor_id=admin.user_id, actor_email=admin.email
     )
@@ -101,7 +102,7 @@ def generate_round_robin(
     division_id: UUID,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> DivisionOut:
+) -> Division:
     return svc.generate_division_round_robin(
         db, division_id, actor_id=admin.user_id, actor_email=admin.email
     )

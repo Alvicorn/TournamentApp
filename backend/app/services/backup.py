@@ -87,7 +87,7 @@ def run_backup(backup_id: UUID) -> None:
 
             s3_key = f"backups/{backup.tournament_id}/{backup_id}.sql.gz"
 
-            import boto3
+            import boto3  # type: ignore[import-untyped]
 
             s3 = boto3.client(
                 "s3",

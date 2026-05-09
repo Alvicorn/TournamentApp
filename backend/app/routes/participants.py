@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import AdminUser
 from app.db import get_db
+from app.models.participant import Participant
 from app.schemas.participant import ParticipantCreate, ParticipantOut, ParticipantUpdate
 from app.services import participant as svc
 
@@ -23,7 +24,7 @@ def create_participant(
     body: ParticipantCreate,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> ParticipantOut:
+) -> Participant:
     return svc.create_participant(
         db, tournament_id, body, actor_id=admin.user_id, actor_email=admin.email
     )
@@ -34,7 +35,7 @@ def list_participants(
     tournament_id: UUID,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> list[ParticipantOut]:
+) -> list[Participant]:
     return svc.list_participants(db, tournament_id)
 
 
@@ -44,7 +45,7 @@ def update_participant(
     body: ParticipantUpdate,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> ParticipantOut:
+) -> Participant:
     return svc.update_participant(
         db, participant_id, body, actor_id=admin.user_id, actor_email=admin.email
     )

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import AdminUser
 from app.db import get_db
+from app.models.judge import Judge
 from app.schemas.judge import JudgeCreate, JudgeOut
 from app.services import judge as svc
 
@@ -23,7 +24,7 @@ def create_judge(
     body: JudgeCreate,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> JudgeOut:
+) -> Judge:
     return svc.create_judge(
         db, tournament_id, body, actor_id=admin.user_id, actor_email=admin.email
     )
@@ -34,7 +35,7 @@ def list_judges(
     tournament_id: UUID,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> list[JudgeOut]:
+) -> list[Judge]:
     return svc.list_judges(db, tournament_id)
 
 

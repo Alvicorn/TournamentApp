@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import AdminUser
 from app.db import get_db
+from app.models.match import Match
 from app.schemas.match import EditResultBody, MatchOut, ReorderBody
 from app.services import match as svc
 
@@ -18,7 +19,7 @@ def list_matches(
     division_id: UUID,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> list[MatchOut]:
+) -> list[Match]:
     return svc.list_matches(db, division_id)
 
 
@@ -28,7 +29,7 @@ def reorder_matches(
     body: ReorderBody,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> list[MatchOut]:
+) -> list[Match]:
     return svc.reorder_matches(
         db, division_id, body, actor_id=admin.user_id, actor_email=admin.email
     )
@@ -44,5 +45,5 @@ def edit_result(
     body: EditResultBody,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> MatchOut:
+) -> Match:
     return svc.edit_result(db, match_id, body, actor_id=admin.user_id, actor_email=admin.email)

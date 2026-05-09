@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import AdminUser
 from app.db import get_db
-from app.models.tournament import LifecycleState
+from app.models.tournament import LifecycleState, Tournament
 from app.schemas.tournament import (
     LifecycleTransition,
     TournamentCreate,
@@ -24,12 +24,12 @@ def create_tournament(
     body: TournamentCreate,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> TournamentOut:
+) -> Tournament:
     return svc.create_tournament(db, body, actor_id=admin.user_id, actor_email=admin.email)
 
 
 @router.get("/active", response_model=TournamentOut)
-def get_active(db: Session = Depends(get_db)) -> TournamentOut:  # noqa: B008
+def get_active(db: Session = Depends(get_db)) -> Tournament:  # noqa: B008
     return svc.get_active_tournament(db)
 
 
@@ -39,7 +39,7 @@ def update_tournament(
     body: TournamentUpdate,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> TournamentOut:
+) -> Tournament:
     return svc.update_tournament(
         db, tournament_id, body, actor_id=admin.user_id, actor_email=admin.email
     )
@@ -51,7 +51,7 @@ def transition_lifecycle(
     body: LifecycleTransition,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> TournamentOut:
+) -> Tournament:
     return svc.transition_lifecycle(
         db, tournament_id, body.state, actor_id=admin.user_id, actor_email=admin.email
     )
@@ -62,7 +62,7 @@ def reset_tournament(
     tournament_id: UUID,
     admin: AdminUser,
     db: Session = Depends(get_db),  # noqa: B008
-) -> TournamentOut:
+) -> Tournament:
     return svc.reset_tournament(db, tournament_id, actor_id=admin.user_id, actor_email=admin.email)
 
 
@@ -79,6 +79,6 @@ def delete_tournament(
 
 
 @router.get("/{tournament_id}/unclaimed-summary")
-def unclaimed_summary(tournament_id: UUID, admin: AdminUser) -> dict:
+def unclaimed_summary(tournament_id: UUID, admin: AdminUser) -> dict[str, int]:
     """Phase 2 stub — always returns zero. Phase 3 wires the real query."""
     return {"unclaimed_count": 0, "division_count": 0}
