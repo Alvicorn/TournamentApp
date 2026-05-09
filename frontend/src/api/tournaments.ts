@@ -13,7 +13,8 @@ export function useTournament() {
           token: token ?? "",
         });
       } catch (e) {
-        if ((e instanceof ApiError || (e as any).name === "ApiError") && (e as any).status === 404) return null;
+        const err = e as { name?: string; status?: number };
+        if ((e instanceof ApiError || err.name === "ApiError") && err.status === 404) return null;
         throw e;
       }
     },

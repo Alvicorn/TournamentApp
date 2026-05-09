@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useNotificationsStore } from "../stores/useNotificationsStore";
 
 const VARIANT_CLASSES: Record<string, string> = {
@@ -13,9 +13,9 @@ const TIMEOUT_MS = 5000;
 function Toast({ t, onDismiss }: { t: { id: string; message: string; variant: string }; onDismiss: (id: string) => void }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const start = () => {
+  const start = useCallback(() => {
     timerRef.current = setTimeout(() => onDismiss(t.id), TIMEOUT_MS);
-  };
+  }, [onDismiss, t.id]);
 
   const pause = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -24,7 +24,7 @@ function Toast({ t, onDismiss }: { t: { id: string; message: string; variant: st
   useEffect(() => {
     start();
     return () => pause();
-  }, []);
+  }, [start]);
 
   return (
     <div

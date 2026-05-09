@@ -74,7 +74,7 @@ export default function AdminSetup() {
       slideshow_slide_seconds: slideshowSlideSeconds,
       is_demo: isDemo,
       judge_auto_release_seconds: judgeAutoReleaseSeconds,
-      custom_participant_fields: customFields.map(({ _id: _, ...rest }) => rest),
+      custom_participant_fields: customFields.map(({ _id, ...rest }) => rest),
     };
     try {
       if (tournament) {
