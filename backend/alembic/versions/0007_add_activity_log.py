@@ -8,6 +8,7 @@ Create Date: 2026-05-04
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -18,7 +19,9 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE TYPE actor_type AS ENUM ('admin', 'judge', 'system')")
+    actor_type = postgresql.ENUM("admin", "judge", "system", name="actor_type", create_type=False)
+    actor_type.create(op.get_bind(), checkfirst=True)
+
     op.create_table(
         "activity_log",
         sa.Column("id", sa.UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
@@ -26,7 +29,7 @@ def upgrade() -> None:
         sa.Column("division_id", sa.UUID, sa.ForeignKey("divisions.id"), nullable=True),
         sa.Column(
             "actor_type",
-            sa.Enum("admin", "judge", "system", name="actor_type", create_type=False),
+            actor_type,
             nullable=False,
         ),
         sa.Column("actor_id", sa.UUID, nullable=True),
@@ -35,7 +38,7 @@ def upgrade() -> None:
         sa.Column("description", sa.Text, nullable=False),
         sa.Column(
             "metadata",
-            sa.dialects.postgresql.JSONB,
+            postgresql.JSONB,
             nullable=False,
             server_default="{}",
         ),
@@ -56,4 +59,4 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("ix_activity_log_tournament_created")
     op.drop_table("activity_log")
-    op.execute("DROP TYPE actor_type")
+    op.execute("DROP TYPE IF EXISTS actor_type CASCADE")

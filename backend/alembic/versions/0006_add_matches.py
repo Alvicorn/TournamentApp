@@ -8,6 +8,7 @@ Create Date: 2026-05-04
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -18,14 +19,26 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.execute(
-        "CREATE TYPE match_phase AS ENUM ('round_robin', 'play_in', 'semi', 'final', 'bronze')"
+    match_phase = postgresql.ENUM(
+        "round_robin", "play_in", "semi", "final", "bronze", name="match_phase", create_type=False
     )
-    op.execute(
-        "CREATE TYPE match_state AS ENUM "
-        "('scheduled', 'in_progress', 'paused', 'pending_review', 'submitted')"
+    match_state = postgresql.ENUM(
+        "scheduled",
+        "in_progress",
+        "paused",
+        "pending_review",
+        "submitted",
+        name="match_state",
+        create_type=False,
     )
-    op.execute("CREATE TYPE round_state AS ENUM ('not_started', 'running', 'paused', 'completed')")
+    round_state = postgresql.ENUM(
+        "not_started", "running", "paused", "completed", name="round_state", create_type=False
+    )
+
+    match_phase.create(op.get_bind(), checkfirst=True)
+    match_state.create(op.get_bind(), checkfirst=True)
+    round_state.create(op.get_bind(), checkfirst=True)
+
     op.create_table(
         "matches",
         sa.Column("id", sa.UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
@@ -34,30 +47,14 @@ def upgrade() -> None:
         sa.Column("competitor_b_id", sa.UUID, sa.ForeignKey("participants.id"), nullable=False),
         sa.Column(
             "phase",
-            sa.Enum(
-                "round_robin",
-                "play_in",
-                "semi",
-                "final",
-                "bronze",
-                name="match_phase",
-                create_type=False,
-            ),
+            match_phase,
             nullable=False,
             server_default="round_robin",
         ),
         sa.Column("order_index", sa.Integer, nullable=False),
         sa.Column(
             "state",
-            sa.Enum(
-                "scheduled",
-                "in_progress",
-                "paused",
-                "pending_review",
-                "submitted",
-                name="match_state",
-                create_type=False,
-            ),
+            match_state,
             nullable=False,
             server_default="scheduled",
         ),
@@ -101,14 +98,7 @@ def upgrade() -> None:
         sa.Column("accumulated_paused_seconds", sa.Integer, nullable=False, server_default="0"),
         sa.Column(
             "state",
-            sa.Enum(
-                "not_started",
-                "running",
-                "paused",
-                "completed",
-                name="round_state",
-                create_type=False,
-            ),
+            round_state,
             nullable=False,
             server_default="not_started",
         ),
@@ -151,6 +141,6 @@ def downgrade() -> None:
     op.drop_index("ix_matches_judge_active")
     op.drop_index("ix_matches_division_order")
     op.drop_table("matches")
-    op.execute("DROP TYPE round_state")
-    op.execute("DROP TYPE match_state")
-    op.execute("DROP TYPE match_phase")
+    op.execute("DROP TYPE IF EXISTS round_state CASCADE")
+    op.execute("DROP TYPE IF EXISTS match_state CASCADE")
+    op.execute("DROP TYPE IF EXISTS match_phase CASCADE")

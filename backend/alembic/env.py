@@ -1,10 +1,13 @@
 import os
 from logging.config import fileConfig
 
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context  # type: ignore[attr-defined]
 from app.models import Base
+
+load_dotenv()
 
 config = context.config
 
@@ -13,6 +16,7 @@ if config.config_file_name is not None:
 
 # DATABASE_URL is only used by Alembic for migrations; the app itself connects
 # via the Supabase client (SUPABASE_URL + SUPABASE_KEY).
+
 database_url = os.environ.get("DATABASE_URL", "")
 if not database_url:
     raise RuntimeError("DATABASE_URL env var required for Alembic migrations")

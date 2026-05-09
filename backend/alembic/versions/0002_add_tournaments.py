@@ -8,6 +8,7 @@ Create Date: 2026-05-04
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -18,7 +19,11 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE TYPE lifecycle_state AS ENUM ('setup', 'active', 'completed')")
+    lifecycle_state = postgresql.ENUM(
+        "setup", "active", "completed", name="lifecycle_state", create_type=False
+    )
+    lifecycle_state.create(op.get_bind(), checkfirst=True)
+
     op.create_table(
         "tournaments",
         sa.Column("id", sa.UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
@@ -30,13 +35,13 @@ def upgrade() -> None:
         sa.Column("slideshow_slide_seconds", sa.Integer, nullable=False),
         sa.Column(
             "lifecycle_state",
-            sa.Enum("setup", "active", "completed", name="lifecycle_state", create_type=False),
+            lifecycle_state,
             nullable=False,
             server_default="setup",
         ),
         sa.Column(
             "custom_participant_fields",
-            sa.dialects.postgresql.JSONB,
+            postgresql.JSONB,
             nullable=False,
             server_default="[]",
         ),
@@ -60,4 +65,4 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("tournaments")
-    op.execute("DROP TYPE lifecycle_state")
+    op.execute("DROP TYPE IF EXISTS lifecycle_state CASCADE")

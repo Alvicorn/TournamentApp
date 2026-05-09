@@ -8,6 +8,7 @@ Create Date: 2026-05-04
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -18,10 +19,19 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.execute(
-        "CREATE TYPE division_state AS ENUM "
-        "('setup', 'round_robin', 'play_ins', 'semis', 'finals', 'completed', 'paused')"
+    division_state = postgresql.ENUM(
+        "setup",
+        "round_robin",
+        "play_ins",
+        "semis",
+        "finals",
+        "completed",
+        "paused",
+        name="division_state",
+        create_type=False,
     )
+    division_state.create(op.get_bind(), checkfirst=True)
+
     op.create_table(
         "divisions",
         sa.Column("id", sa.UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
@@ -29,17 +39,7 @@ def upgrade() -> None:
         sa.Column("name", sa.Text, nullable=False),
         sa.Column(
             "state",
-            sa.Enum(
-                "setup",
-                "round_robin",
-                "play_ins",
-                "semis",
-                "finals",
-                "completed",
-                "paused",
-                name="division_state",
-                create_type=False,
-            ),
+            division_state,
             nullable=False,
             server_default="setup",
         ),
@@ -72,4 +72,4 @@ def downgrade() -> None:
     op.drop_index("ix_participants_division_withdrawn")
     op.drop_constraint("fk_participants_division_id", "participants", type_="foreignkey")
     op.drop_table("divisions")
-    op.execute("DROP TYPE division_state")
+    op.execute("DROP TYPE IF EXISTS division_state CASCADE")

@@ -8,6 +8,7 @@ Create Date: 2026-05-04
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -18,15 +19,22 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE TYPE backup_trigger AS ENUM ('manual', 'pre_action', 'hourly')")
-    op.execute("CREATE TYPE backup_status AS ENUM ('pending', 'complete', 'failed')")
+    backup_trigger = postgresql.ENUM(
+        "manual", "pre_action", "hourly", name="backup_trigger", create_type=False
+    )
+    backup_status = postgresql.ENUM(
+        "pending", "complete", "failed", name="backup_status", create_type=False
+    )
+    backup_trigger.create(op.get_bind(), checkfirst=True)
+    backup_status.create(op.get_bind(), checkfirst=True)
+
     op.create_table(
         "backups",
         sa.Column("id", sa.UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("tournament_id", sa.UUID, sa.ForeignKey("tournaments.id"), nullable=False),
         sa.Column(
             "triggered_by",
-            sa.Enum("manual", "pre_action", "hourly", name="backup_trigger", create_type=False),
+            backup_trigger,
             nullable=False,
         ),
         sa.Column("pre_action_description", sa.Text, nullable=True),
@@ -34,7 +42,7 @@ def upgrade() -> None:
         sa.Column("size_bytes", sa.BigInteger, nullable=True),
         sa.Column(
             "status",
-            sa.Enum("pending", "complete", "failed", name="backup_status", create_type=False),
+            backup_status,
             nullable=False,
             server_default="pending",
         ),
@@ -50,5 +58,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("backups")
-    op.execute("DROP TYPE backup_status")
-    op.execute("DROP TYPE backup_trigger")
+    op.execute("DROP TYPE IF EXISTS backup_status CASCADE")
+    op.execute("DROP TYPE IF EXISTS backup_trigger CASCADE")
