@@ -102,6 +102,7 @@ jobs:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
           IMAGE_TAG: ${{ github.sha }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+          DATAABASE_URL: ${{ secrets.DATABASE_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           REDIS_URL: ${{ secrets.REDIS_URL }}
@@ -114,6 +115,7 @@ jobs:
               "image":"'"$ECR_REGISTRY/tournament_app:latest"'",
               "containerPort":8080,
               "environment":[
+                {"name":"DATABASE_URL","value":"'"$DATABASE_URL"'"},
                 {"name":"SUPABASE_URL","value":"'"$SUPABASE_URL"'"},
                 {"name":"SUPABASE_KEY","value":"'"$SUPABASE_KEY"'"},
                 {"name":"REDIS_URL","value":"'"$REDIS_URL"'"},

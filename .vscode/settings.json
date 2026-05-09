@@ -1,7 +1,11 @@
 {
     "cSpell.words": [
+        "autoflush",
+        "checkfirst",
+        "sessionmaker",
         "slowapi",
         "supabase",
         "uvicorn"
-    ]
+    ],
+    "azureTerraform.checkTerraformCmd": false
 }
