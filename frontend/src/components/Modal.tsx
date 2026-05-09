@@ -7,6 +7,7 @@ type Props = {
   children: ReactNode;
 };
 
+
 export function Modal({ open, onClose, title, children }: Props) {
   if (!open) return null;
   return (
