@@ -63,37 +63,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Sync env vars to Render
-        working-directory: .
-        run: |
-          jq -n \
-            --arg allowlist "$ADMIN_EMAIL_ALLOWLIST" \
-            --arg db        "$DATABASE_URL" \
-            --arg jwt       "$JUDGE_JWT_SECRET" \
-            --arg supa_key  "$SUPABASE_KEY" \
-            --arg supa_url  "$SUPABASE_URL" \
-            '[
-              {"key":"ADMIN_EMAIL_ALLOWLIST","value":$allowlist},
-              {"key":"DATABASE_URL","value":$db},
-              {"key":"JUDGE_JWT_SECRET","value":$jwt},
-              {"key":"SUPABASE_KEY","value":$supa_key},
-              {"key":"SUPABASE_URL","value":$supa_url}
-            ]' | \
-          curl -fsS -X PUT \
-            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_BACKEND/env-vars" \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d @-
-        env:
-          ADMIN_EMAIL_ALLOWLIST:  ${{ secrets.ADMIN_EMAIL_ALLOWLIST }}
-          DATABASE_URL:           ${{ secrets.DATABASE_URL }}
-          JUDGE_JWT_SECRET:       ${{ secrets.JUDGE_JWT_SECRET }}
-          SUPABASE_KEY:           ${{ secrets.SUPABASE_KEY }}
-          SUPABASE_URL:           ${{ secrets.SUPABASE_URL }}
-
       # Render pulls the repo and builds the Docker image itself; CI only
       # gates the deploy on green tests. Auto-deploy is disabled in Render.
       - name: Trigger Render deploy
         run: curl -fsS "$RENDER_DEPLOY_HOOK_BACKEND" > /dev/null
         env:
           RENDER_DEPLOY_HOOK_BACKEND: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}
+          RENDER_SERVICE_ID_BACKEND: ${{ secrets.RENDER_SERVICE_ID_BACKEND }}
+          ADMIN_EMAIL_ALLOWLIST:     ${{ secrets.ADMIN_EMAIL_ALLOWLIST }}
+          DATABASE_URL:              ${{ secrets.DATABASE_URL }}
+          JUDGE_JWT_SECRET:          ${{ secrets.JUDGE_JWT_SECRET }}
+          SUPABASE_KEY:              ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
