@@ -19,6 +19,7 @@ Gherkin feature files in `tests/features/` cover:
 8. Tiny division handling (<2, 2, 3, 4+)
 9. Custom field freezing on activation
 10. Judge multi-device session invalidation
+11. Offline outbox replay (idempotent re-flush, pause-duration math from client timestamps, sudden-death entered offline, rejected replay after reassignment)
 
 ### Tooling
 - **`pytest-bdd`** — Python flavor of Cucumber. Same fixture system as pytest, same CLI, same CI integration.
@@ -108,6 +109,13 @@ Test FastAPI routes against a real Postgres. Catches SQL/transaction bugs that u
 - **Editing submitted match (post-round-robin, regenerate=true)** → bracket destroyed and rebuilt.
 - **Score with duplicate `client_event_id`** → returns same response, doesn't double-count.
 - **Score undo** → reverses last event, doesn't affect earlier events.
+- **Outbox replay (full)**: a recorded offline sequence (scores + pause/resume/end-round commands) replayed in order → final match state identical to the same sequence performed online.
+- **Outbox replay interrupted halfway, restarted from the top** → no duplicates (idempotency on `client_event_id`/`client_command_id`).
+- **Replayed pause/resume with client timestamps** → `accumulated_paused_seconds` equals the client-timestamp deltas, regardless of server receive time.
+- **Replayed command with out-of-bounds timestamp** (future, before round start, non-monotonic) → 422, not applied.
+- **Replay after admin reassigned the match** → 409; no events applied.
+- **Final round replayed offline ends tied** → server creates the sudden-death round on sync.
+- **Submit with undrained outbox** → rejected.
 - **Forfeit during round 2 of 3** → match goes to review, no further rounds played.
 - **Sudden death triggers when final round ends tied** → extra round created, no time limit.
 - **Auto-release**: paused match with stale `last_action_at` → released, judge unassigned.
@@ -133,7 +141,9 @@ The judge scoring screen is the only frontend surface where bugs cause real-worl
 - Undo button reverses last score event.
 - Connection-lost banner appears after 5s without successful poll.
 - Connection-lost overlay appears after 30s.
-- Reconnect re-fetches state and discards local cache.
+- Offline: banner appears, scoring buttons stay enabled, taps append to outbox, pending badge counts up, submit disabled.
+- Reconnect flushes outbox in order, then re-fetches state; toast shows synced count.
+- Rejected flush (reassigned match) shows the unsent-events modal; outbox not cleared.
 
 ### Layer 4: End-to-end tests (medium ROI; pick scenarios carefully)
 
@@ -159,6 +169,7 @@ Build a **headless tournament simulator** that drives the API like a fuzzer:
 - Generates a random tournament (3–32 competitors).
 - Random rounds per match (1–5).
 - Simulates judges claiming, scoring, occasionally forfeiting/pausing.
+- Randomly drops judges "offline" mid-match: buffers their actions with timestamps, replays later (sometimes twice, sometimes interleaved with admin reassignment).
 - Runs the entire tournament to completion.
 
 Asserts invariants:

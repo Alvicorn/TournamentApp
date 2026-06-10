@@ -7,7 +7,7 @@
 - **Zustand** for state (chosen over Redux for simplicity; this app's state is small)
 - **TanStack Query** (React Query) for API calls + caching + invalidation
 - Custom SSE hook (`useSSE(url)`) — wraps `EventSource` and feeds events into Zustand stores
-- Service Worker for Web Push
+- Service Worker (via `vite-plugin-pwa`) for Web Push **and** offline app-shell caching (judge scoring must survive a refresh while offline)
 - **Vite** for build tooling
 
 ## Why Zustand?
@@ -53,6 +53,7 @@ The original spec called for Redux Toolkit. We switched because:
 | `useAuthStore` | Current user, role, JWT |
 | `useTournamentStore` | Active tournament config |
 | `useLiveScoreStore` | Driven by SSE; keyed by matchId |
+| `useOutboxStore` | Judge offline outbox: queued score events + round commands, persisted to IndexedDB; pending count drives the offline banner |
 | `useSubscriptionsStore` | Public, hydrated from localStorage + API |
 | `useNotificationsStore` | Toast queue |
 | `useUIStore` | Slideshow index, modals, connection status |
@@ -146,7 +147,7 @@ This is read-only diagnostic, not impersonation.
 ### Backup management (admin)
 - Tournament settings page shows: **"Last automatic snapshot: 14 minutes ago"** (read-only status indicator).
 - **No "Snapshot Now" button.** Snapshots are taken automatically before any risky operation (regenerate bracket, edit submitted result, lifecycle transition, late participant addition). The system does this; the admin doesn't think about it.
-- **No restore-from-UI.** Restore is a manual ops procedure handled by an engineer with database access. See [`operations.md`](../infra/operations.md#bad-admin-edit-runbook). This is intentional — restore should never happen in front of users mid-tournament; it's a deliberate, careful action.
+- **No restore-from-UI.** Restore is a manual ops procedure handled by an engineer with database access. See [`deployment.md`](deployment.md#backups). This is intentional — restore should never happen in front of users mid-tournament; it's a deliberate, careful action.
 - Snapshot list visible at `/admin/backups` for transparency: shows timestamps, what triggered each, and download links. View-only.
 
 ### Unclaimed match alert
@@ -164,17 +165,29 @@ On admin home, if more than 3 round-robin matches are unclaimed and the tourname
 
 ## Judge reconnect behavior
 
-- On page load AND on SSE reconnect, **always re-fetch match state from server**.
-- Never trust client cache after a network gap.
-- If the judge's claimed match has been auto-released or reassigned, show a clear toast: "Your match was reassigned. View other available matches."
+- On page load AND on SSE reconnect: **flush the offline outbox first, then re-fetch match state from server**. Flushing first means the snapshot already includes the judge's offline work — see [`correctness.md`](correctness.md#reconnect-behavior-judges).
+- Never trust client cache after a network gap (the outbox is the one exception — it's the record of what the server hasn't seen).
+- If the judge's claimed match has been auto-released or reassigned, show a clear toast: "Your match was reassigned. View other available matches." If the outbox had pending events, surface them per the conflict UX below — never discard silently.
 
-## Judge offline overlay
+## Judge offline banner
 
-When the device goes offline (`navigator.onLine = false` or score event fails):
-- **Full-screen overlay** on judge scoring screen: "OFFLINE — cannot score".
-- All buttons disabled: `+1`, `-1`, undo, pause/resume, end round, submit.
-- Round timer continues to display the last known elapsed time.
-- On reconnect: re-fetch match state, dismiss overlay, toast "Back online. You can resume scoring."
+Scoring continues offline — see [`correctness.md`](correctness.md#judge-offline-scoring) for the design. When the device goes offline (`navigator.onLine = false` or a request fails):
+
+- **Non-blocking amber banner** at the top of the scoring screen: **"Offline — scoring saved on this device"**, with a pending-events badge ("4 pending sync").
+- All scoring and round-control buttons (`+1`, `-1`, undo, pause/resume, end round) **stay enabled**; actions append to the outbox and update the UI optimistically.
+- **Submit stays disabled while offline** (and until the outbox is drained), with helper text "Reconnect to submit".
+- Round timer keeps running locally (it derives from timestamps; no server needed).
+- On reconnect: outbox flushes, banner dismisses, toast **"Back online — N events synced."**
+
+### Conflict UX (match reassigned while offline)
+If the flush is rejected because the match was reassigned or the judge removed:
+- Modal: "This match was reassigned while you were offline. Your **N** recorded events were NOT submitted."
+- The modal lists the unsent events (time, competitor, ±1) so the score can be reconstructed with the admin.
+- Events remain viewable from the match queue until dismissed explicitly.
+
+### PWA app shell
+- `vite-plugin-pwa` precaches the app shell so a refresh or accidental tab close while offline returns to a working scoring screen (outbox and last match snapshot persist in IndexedDB).
+- Judge instruction stays simple: you don't need to avoid refreshing, but don't switch devices while offline (sessions are single-device).
 
 ## Judge multi-device
 
@@ -246,6 +259,7 @@ A small status pill in the corner of every page:
 - 🟢 Live — SSE connected (or polling succeeding)
 - 🟡 Reconnecting — < 30s since last successful update
 - 🔴 Disconnected — > 30s; for public dashboard, also show full-screen overlay
+- 🟠 Offline — N pending — judge scoring screen only: device offline with N outbox events awaiting sync (mirrors the offline banner)
 
 ## Theming / accessibility
 
