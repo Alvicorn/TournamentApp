@@ -7,10 +7,12 @@ A web app for monitoring a live martial arts tournament. See [`docs/`](docs/) fo
 ```
 backend/    FastAPI + SQLAlchemy + Alembic
 frontend/   React + TypeScript + Vite + Zustand + Tailwind
-infra/      Terraform for Redis EC2 + CloudWatch
-.github/    CI/CD workflows
+.github/    CI/CD workflows (deploys via Render deploy hooks)
+render.yaml Render blueprint (web service + static site)
 docs/       Source of truth — read this first
 ```
+
+Hosting: Render (frontend static site + backend web service), Supabase (Postgres + admin auth). See [`docs/deployment.md`](docs/deployment.md).
 
 ## Local development
 
@@ -39,4 +41,4 @@ cd frontend && pnpm test
 
 ## Environment
 
-Copy `.env.example` files in `backend/` and `frontend/` and fill in. See [`docs/infra/deployment.md`](docs/infra/deployment.md#environment-configuration).
+Copy `.env.example` files in `backend/` and `frontend/` and fill in. See [`docs/deployment.md`](docs/deployment.md#environment-configuration).

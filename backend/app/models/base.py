@@ -1,7 +1,7 @@
 """SQLAlchemy declarative base + shared mixins.
 
 All timestamp columns use ``server_default=func.now()`` and ``onupdate=func.now()``
-so the Postgres clock is the only authority. See ``docs/engineering/correctness.md``.
+so the Postgres clock is the only authority. See ``docs/correctness.md``.
 
 All deletes are soft deletes via ``deleted_at``.
 """

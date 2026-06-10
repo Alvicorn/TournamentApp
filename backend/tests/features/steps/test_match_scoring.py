@@ -84,7 +84,7 @@ def then_sudden_death(state: dict[str, Any]) -> None:
 
 @then("no time limit applies")
 def then_no_time_limit(state: dict[str, Any]) -> None:
-    # Sudden-death has no time limit by rule (see docs/product/rules.md).
+    # Sudden-death has no time limit by rule (see docs/product.md).
     assert state["match_state"] == "sudden_death"
 
 

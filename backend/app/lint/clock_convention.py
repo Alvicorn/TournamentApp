@@ -1,6 +1,6 @@
 """Static check enforcing the Postgres-clock convention.
 
-Rules (see ``docs/engineering/correctness.md#timer-authority``):
+Rules (see ``docs/correctness.md#timer-authority``):
 
 1. No ``datetime.utcnow`` or ``datetime.now`` calls in ``app/`` (except this
    file's own helper text and ``app/models/base.py`` where the soft-delete

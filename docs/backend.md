@@ -8,8 +8,8 @@
 - **Supabase Postgres** (database; accessed via SQLAlchemy)
 - **Supabase Auth** for admin login (FastAPI verifies JWTs)
 - Self-signed JWTs for judge sessions (HS256, server-side secret)
-- **Redis** for SSE pub/sub fan-out across uvicorn workers
-- **uvicorn** with `--workers N` (N = CPU count)
+- In-process asyncio pub/sub for SSE fan-out (see [`architecture.md`](architecture.md#single-instance-constraint))
+- **uvicorn** with a **single worker** — required for the in-process pub/sub and caches; the app must not be scaled to multiple workers/instances without reintroducing a broker
 
 ## Data model
 
@@ -27,7 +27,7 @@ All PKs are UUIDs unless noted. Timestamps are `TIMESTAMPTZ`. **All deletes are 
 | slideshow_slide_seconds | int | Global slideshow timing |
 | lifecycle_state | enum | `setup \| active \| completed` |
 | custom_participant_fields | jsonb | `[{key, label, type, required}]`; frozen on `active` |
-| is_demo | bool | Excludes from public view; allows reset |
+| is_demo | bool | Excludes from public view; "reset" = delete + recreate (no reset endpoint) |
 | judge_auto_release_seconds | int | Default 600; auto-release stale paused matches |
 | created_at, updated_at, deleted_at | timestamptz | |
 
@@ -98,7 +98,7 @@ All PKs are UUIDs unless noted. Timestamps are `TIMESTAMPTZ`. **All deletes are 
 | state | enum | `not_started \| running \| paused \| completed` |
 
 ### `score_events`
-Append-only log enabling undo and idempotency.
+Append-only log enabling undo, idempotency, and offline replay.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -108,10 +108,26 @@ Append-only log enabling undo and idempotency.
 | competitor_id | uuid FK | |
 | delta | int | `+1` or `-1` |
 | client_event_id | uuid | Client-generated, deduped server-side |
-| created_at | timestamptz | |
+| client_recorded_at | timestamptz | Tap time on the judge's device; authoritative event time for offline-queued scores |
+| created_at | timestamptz | Server receive time |
 | undone_at | timestamptz nullable | |
 
 > Unique index: `(match_id, client_event_id)` for idempotency.
+
+### `match_commands`
+Append-only log of round-control actions, enabling idempotent offline replay of pause/resume/end-round. See [`correctness.md`](correctness.md#judge-offline-scoring).
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| match_id | uuid FK | |
+| round_number | int | |
+| command | enum | `start_round \| pause \| resume \| end_round` |
+| client_command_id | uuid | Client-generated, deduped server-side |
+| occurred_at | timestamptz | Client-clock time of the action; pause/resume durations derive from deltas between these |
+| created_at | timestamptz | Server receive time |
+
+> Unique index: `(match_id, client_command_id)` for idempotency.
 
 ### `subscriptions`
 | Column | Type | Notes |
@@ -165,6 +181,7 @@ Surfaced in admin UI as a real-time event feed (see [`frontend.md`](frontend.md)
 - `subscriptions (tournament_wide) WHERE deleted_at IS NULL`
 - `activity_log (tournament_id, created_at DESC)`
 - `score_events (match_id, round_number, created_at DESC)`
+- `match_commands (match_id, created_at)`
 
 ## API surface
 
@@ -230,12 +247,14 @@ All routes prefixed `/api/v1`. JSON bodies. JWT in `Authorization: Bearer ...` w
 - `POST /matches/{id}/release` — un-assign before starting (still `scheduled`)
 - `POST /divisions/{id}/reorder-matches`
 - `POST /matches/{id}/start`
-- `POST /matches/{id}/rounds/{round_number}/start`
-- `POST /matches/{id}/rounds/{round_number}/pause`
-- `POST /matches/{id}/rounds/{round_number}/resume`
-- `POST /matches/{id}/rounds/{round_number}/end`
-- `POST /matches/{id}/score` — body: `{competitor_id, delta, client_event_id}` — current round only; idempotent
+- `POST /matches/{id}/rounds/{round_number}/start` — body: `{client_command_id, occurred_at}`; idempotent
+- `POST /matches/{id}/rounds/{round_number}/pause` — body: `{client_command_id, occurred_at}`; idempotent
+- `POST /matches/{id}/rounds/{round_number}/resume` — body: `{client_command_id, occurred_at}`; idempotent
+- `POST /matches/{id}/rounds/{round_number}/end` — body: `{client_command_id, occurred_at}`; idempotent
+- `POST /matches/{id}/score` — body: `{competitor_id, delta, client_event_id, client_recorded_at}` — current round only; idempotent
 - `POST /matches/{id}/score/undo` — undoes most recent un-undone score event
+
+> Round-control and score endpoints are **replay-safe**: the same request (same `client_command_id` / `client_event_id`) returns the same response without re-applying. The offline outbox flushes through these exact endpoints in recorded order — there is no separate batch-sync API. `occurred_at` / `client_recorded_at` carry the judge-device clock time; the server uses deltas between them for timer math and sanity-bounds them. See [`correctness.md`](correctness.md#judge-offline-scoring).
 - `POST /matches/{id}/forfeit` — body: `{competitor_id}` → moves match to `pending_review`
 - `POST /matches/{id}/submit` — final commit; only allowed when final round has ended
 
@@ -254,6 +273,8 @@ All routes prefixed `/api/v1`. JSON bodies. JWT in `Authorization: Bearer ...` w
 
 > **Public surfaces don't use SSE** — they poll. See [`architecture.md`](architecture.md#realtime-strategy).
 
+> **SSE auth**: `EventSource` cannot set headers, so SSE endpoints accept the JWT as a `?token=` query parameter (verified identically to header auth). Never log query strings on `/sse/*` paths.
+
 ## Judge code generation
 
 - 8 characters: 7 random + 1 checksum.
@@ -266,7 +287,7 @@ All routes prefixed `/api/v1`. JSON bodies. JWT in `Authorization: Bearer ...` w
 ## Background jobs
 
 - **Auto-release stale matches**: scan every 60s for `state = 'paused'` matches where `last_action_at` is older than `judge_auto_release_seconds`. Release the judge assignment, set `state = 'scheduled'`, write `system` activity log entry. **Never auto-release `in_progress` matches.**
-- **Web Push fan-out**: triggered by SSE pub/sub events on subscribed channels. Sends VAPID push to subscriptions where `web_push_endpoint IS NOT NULL`.
+- **Web Push fan-out**: triggered by events on the in-process pub/sub bus for subscribed channels. Sends VAPID push to subscriptions where `web_push_endpoint IS NOT NULL`.
 
 ## Concurrency safety
 
@@ -279,22 +300,22 @@ All routes prefixed `/api/v1`. JSON bodies. JWT in `Authorization: Bearer ...` w
 
 ## Rate limiting
 
-Per-IP rate limiting via `slowapi`. Full table in [`operations.md`](../infra/operations.md#rate-limiting).
+Rate limiting via `slowapi`. **Public endpoints are keyed per `X-Device-Id`** (fallback IP) because venue NAT puts every spectator behind one IP; login endpoints stay per-IP. Full table and reasoning in [`deployment.md`](deployment.md#rate-limiting).
 
 Key limits to remember:
-- Public endpoints: 60 req/min
-- Login endpoints (admin/judge): 5 attempts per 15 min
-- SSE connections: 5 per IP
+- Public endpoints: 60 req/min per device
+- Login endpoints (admin/judge): 5 attempts per 15 min per IP
+- SSE connections: 5 concurrent per token subject
 - All other authenticated endpoints: 600 req/min
 
-CloudFront caches `GET /tournaments/active/dashboard` for 3 seconds at the edge as defense-in-depth.
+The public dashboard payload is cached in-process for 3 seconds (device-neutral response), so polling load on the database is constant regardless of audience size.
 
 ## Standings cache
 
 Standings computation is non-trivial (filter matches → group by competitor → sort by tie-break rules). Caching prevents N²-ish work on every public poll.
 
 - Computed once per submitted match.
-- Cached in Redis with key `standings:division:{id}`, TTL 1 hour.
+- Cached **in-process** (dict keyed by division id), TTL 1 hour. Safe because the app runs as a single instance with a single worker.
 - Invalidated on:
   - Match submission
   - Match result edit

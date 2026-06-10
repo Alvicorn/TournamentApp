@@ -1,75 +1,37 @@
 # Project: Martial Arts Tournament Monitoring App
 
-This directory is the **single source of truth** for the project. Files are organized into four subdirectories by concern.
+This directory is the **single source of truth** for the project. Flat structure, ten files.
 
-## Directory layout
+## Files & reading order
 
-```
-.claude/
-├── README.md
-├── product/                   ← what we're building and why
-│   ├── overview.md
-│   ├── user-stories.md
-│   └── rules.md
-├── engineering/               ← how it's built
-│   ├── architecture.md
-│   ├── backend.md
-│   ├── frontend.md
-│   └── correctness.md
-├── infra/                     ← how it runs
-│   ├── deployment.md
-│   └── operations.md
-└── process/                   ← how we work on it
-    ├── testing.md
-    ├── backlog.md
-    └── memory.md
-```
-
-## Reading order
-
-If you're new, read in this order:
-
-| # | File | Why first |
-|---|------|-----------|
-| 1 | [`product/overview.md`](product/overview.md) | What the app is, who uses it |
-| 2 | [`product/user-stories.md`](product/user-stories.md) | Scope and roles |
-| 3 | [`product/rules.md`](product/rules.md) | Tournament logic — the domain |
-| 4 | [`engineering/architecture.md`](engineering/architecture.md) | High-level system shape |
-| 5 | [`engineering/backend.md`](engineering/backend.md) | FastAPI, data model, APIs |
-| 6 | [`engineering/frontend.md`](engineering/frontend.md) | React, routes, UX |
-| 7 | [`engineering/correctness.md`](engineering/correctness.md) | Edge cases that bite if missed |
-| 8 | [`process/testing.md`](process/testing.md) | How we verify it works |
-| 9 | [`infra/deployment.md`](infra/deployment.md) | AWS topology, CI/CD |
-| 10 | [`infra/operations.md`](infra/operations.md) | Backups, monitoring, runbooks |
-| 11 | [`process/backlog.md`](process/backlog.md) | Phased plan + future work |
-| 12 | [`process/memory.md`](process/memory.md) | Decision log, gotchas — read last, refer to often |
-
-## What goes where
-
-- **`product/`** — anything a non-engineer should be able to read. The "what" and "why" of the app.
-- **`engineering/`** — the "how" at the code level. Frontend, backend, data model, edge-case behavior.
-- **`infra/`** — the "where" the app runs. AWS resources, deployment, operations runbooks.
-- **`process/`** — meta-concerns. Testing strategy, what's pending, history of decisions.
+| # | File | What's in it |
+|---|------|--------------|
+| 1 | [`product.md`](product.md) | What the app is, who uses it, scope (user stories), tournament rules, state machines |
+| 2 | [`architecture.md`](architecture.md) | System shape, data flow, single-instance constraint, realtime strategy, auth flows |
+| 3 | [`backend.md`](backend.md) | FastAPI service: full data model, API surface, background jobs, concurrency safety |
+| 4 | [`frontend.md`](frontend.md) | React app: routes, stores, UX guardrails, offline UX, empty states |
+| 5 | [`correctness.md`](correctness.md) | Edge cases that bite if missed: timer authority, idempotency, offline scoring, races |
+| 6 | [`testing.md`](testing.md) | Test layers, BDD scope, simulation suite, CI pipeline, coverage targets |
+| 7 | [`deployment.md`](deployment.md) | Hosting (Render/Supabase/R2), backups, rate limiting, logging, lifecycle behavior, CI/CD |
+| 8 | [`backlog.md`](backlog.md) | Phased implementation plan, open design questions, future work, known limitations |
+| 9 | [`conventions.md`](conventions.md) | Naming conventions + one-page gotcha cheat sheet — refer to it often |
 
 ## Working with this directory
 
-- **When a decision is made**, update the relevant file. Do not silently override.
-- **When you discover a gotcha**, append it to [`process/memory.md`](process/memory.md).
-- **When scope changes**, update [`process/backlog.md`](process/backlog.md) first; the rest of the docs follow.
-- **Cross-reference, don't duplicate**: if rules are in `product/rules.md`, link to that section from elsewhere.
-- **When adding a new doc**, place it in the most appropriate subdirectory and update this README's directory layout + reading order.
+- **When a decision is made or changed**, update the relevant file. Docs describe current state only — no history, no "previously we did X".
+- **Cross-reference, don't duplicate**: if a rule lives in `product.md`, link to it from elsewhere.
+- **New gotcha discovered** → add it to [`conventions.md`](conventions.md).
+- **Scope changes** → update [`backlog.md`](backlog.md) first; the rest of the docs follow.
 
 ## Quick reference
 
 | Need | Look here |
 |------|-----------|
-| What does this app do? | [`product/overview.md`](product/overview.md) |
-| What are the tournament rules? | [`product/rules.md`](product/rules.md) |
-| What's the data model? | [`engineering/backend.md`](engineering/backend.md) |
-| What's a route called X? | [`engineering/backend.md`](engineering/backend.md) (API) or [`engineering/frontend.md`](engineering/frontend.md) (UI) |
-| What if X edge case happens? | [`engineering/correctness.md`](engineering/correctness.md) |
-| How does it deploy? | [`infra/deployment.md`](infra/deployment.md) |
-| Something broke at the venue — what do I do? | [`infra/operations.md`](infra/operations.md) (runbooks) |
-| Why was X decided that way? | [`process/memory.md`](process/memory.md) |
-| What's next to build? | [`process/backlog.md`](process/backlog.md) |
-| How do we test this? | [`process/testing.md`](process/testing.md) |
+| What does this app do? What are the rules? | [`product.md`](product.md) |
+| What's the data model / a route called X? | [`backend.md`](backend.md) (API) or [`frontend.md`](frontend.md) (UI) |
+| What if X edge case happens? | [`correctness.md`](correctness.md) |
+| How does offline judge scoring work? | [`correctness.md`](correctness.md#judge-offline-scoring) |
+| How does it deploy? What are the env vars? | [`deployment.md`](deployment.md) |
+| What's next to build? What's still undecided? | [`backlog.md`](backlog.md) |
+| How do we test this? | [`testing.md`](testing.md) |
+| Naming / things that are easy to get wrong | [`conventions.md`](conventions.md) |

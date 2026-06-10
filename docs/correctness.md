@@ -7,7 +7,7 @@ This document captures the correctness-critical behaviors that are easy to get w
 **The server is the authoritative source of round time.** The client only displays time; it never decides time.
 
 ### Single clock: Postgres `now()`
-All server-side timestamps come from Postgres `now() AT TIME ZONE 'utc'`, **not** Python's `datetime.utcnow()`. This avoids drift between FastAPI process clocks (which can vary across Fargate task replicas) and the database. SQLAlchemy `server_default=func.now()` handles inserts; explicit `now()` in UPDATE statements handles modifications.
+All server-side timestamps come from Postgres `now() AT TIME ZONE 'utc'`, **not** Python's `datetime.utcnow()`. This avoids drift between the FastAPI process clock and the database. SQLAlchemy `server_default=func.now()` handles inserts; explicit `now()` in UPDATE statements handles modifications.
 
 Why this matters: under load, a Python clock can be 50–200ms behind the DB. For a sudden-death scenario where two scores arrive milliseconds apart, this matters.
 
@@ -42,12 +42,15 @@ WHERE id = :round_id AND state = 'running';
 
 The client recomputes display from these timestamps; client clock skew is irrelevant because we only use deltas relative to `started_at`.
 
+### Offline exception
+For round-control commands replayed from an offline outbox, the **client's recorded timestamps become the authoritative event times** (`match_commands.occurred_at`). Pause/resume durations are computed from *deltas between client timestamps*, which are immune to absolute clock skew because they come from one device clock. The server sanity-bounds replayed timestamps: not in the future (vs. server `now()` + small tolerance), not before the round's `started_at`, and strictly monotonic within the replayed sequence. Out-of-bound commands are rejected with 422 and surfaced to the judge. See [Judge offline scoring](#judge-offline-scoring).
+
 ## Score idempotency
 
 Network retries must not double-count. Misclicks must be undoable.
 
 ### Idempotency
-Each score event from the client carries a `client_event_id` (UUID). Server dedupes on `(match_id, client_event_id)` via unique index. A retry with the same id returns the same response without applying the delta a second time.
+Each score event from the client carries a `client_event_id` (UUID) and a `client_recorded_at` timestamp (when the judge actually tapped). Server dedupes on `(match_id, client_event_id)` via unique index. A retry with the same id returns the same response without applying the delta a second time. This same mechanism makes offline outbox replay safe — a flush interrupted halfway can simply start over from the top.
 
 ### Undo
 - All score events are stored in `score_events` (append-only).
@@ -66,20 +69,16 @@ GROUP BY competitor_id;
 
 ## Reconnect behavior (judges)
 
-Judges can lose network mid-match (Wi-Fi flaps, phone sleeps, etc.).
+Judges can lose network mid-match (Wi-Fi flaps, phone sleeps, etc.). While offline they keep scoring into the local outbox (see [Judge offline scoring](#judge-offline-scoring)); reconnect is when local and server state converge.
 
-### On page load
-1. Fetch judge's current claimed match from server.
-2. Fetch full match state including all rounds and current scores.
-3. Reconnect SSE.
-4. If the judge's previously-claimed match was auto-released or reassigned, show a toast and route to the division match queue.
+### On reconnect (page load or SSE reconnect)
+1. **Flush the outbox first**: replay queued score events and round commands to the server, in recorded order, through the normal endpoints (idempotent). The outbox must drain before any state fetch, otherwise the fetch would "roll back" the judge's local view.
+2. Fetch full match state including all rounds and current scores (full snapshot, not delta).
+3. Replace local Zustand state with the server snapshot. After a successful flush this matches what the judge was already seeing.
+4. Reconnect SSE and resume listening.
+5. If the flush was rejected (match reassigned/judge removed → 409), do NOT discard the outbox silently — see the conflict handling in [Judge offline scoring](#judge-offline-scoring). Show the toast and route to the division match queue.
 
-### On SSE reconnect
-1. Re-fetch match state (full snapshot, not delta).
-2. Replace local Zustand state.
-3. Resume listening.
-
-**Never trust local state after a connection gap.** SSE reconnects use `Last-Event-ID` if you want to be fancy, but for MVP a full re-fetch is simpler and sufficient.
+**Never trust local state after a connection gap** — except the outbox, which is precisely the record of what the server hasn't seen yet. Everything else is replaced by the server snapshot.
 
 ## Stuck match recovery
 
@@ -281,27 +280,43 @@ def judge_login(tournament_id, code):
 
 ## Judge offline scoring
 
-When the judge's device is offline (no network, browser detects), scoring is **disabled entirely**. No queueing, no optimistic updates.
+Judge scoring **keeps working offline**. The judge's device is the only writer to its match (single judge per match + single-device sessions), so a local-first queue is safe: actions are recorded locally with the device's timestamp, applied optimistically to the UI, and replayed to the server when connectivity returns.
+
+> This reverses an earlier decision to disable scoring offline. The original objection — "score timing matters, queueing mis-records it" — is resolved by capturing `client_recorded_at` at tap time: a replayed event carries the exact moment the judge tapped, not the moment the network recovered.
+
+### What works offline
+- Scoring: `+1` / `-1` / undo.
+- Round control: pause, resume, end round.
+- Sudden-death entry: if the final round ends tied while offline, the client enters sudden-death locally — the trigger is a deterministic rule, so client and server reach the same conclusion when the queue replays.
+- A page refresh: the PWA service worker serves the app shell, and the outbox + match snapshot are persisted locally.
+
+### What requires network
+- **Submit** (the final, irreversible commit) — and it additionally requires the outbox to be fully drained, so a submitted match always reflects every recorded event.
+- Claiming or starting a *new* match (server must arbitrate contention).
 
 ### Detection
-- Browser's `navigator.onLine` + active fetch failures.
-- After 1 failed score event request → assume offline → show overlay.
+- Browser's `navigator.onLine` + fetch failures (1 failed request → treat as offline).
+- While offline: show the non-blocking offline banner ([`frontend.md`](frontend.md#judge-offline-banner)); keep all scoring/round buttons enabled.
 
-### UI behavior
-- Full-screen overlay on the scoring screen: **"OFFLINE — cannot score"**.
-- Buttons (`+1`, `-1`, undo, pause/resume, end round, submit) all disabled.
-- Round timer continues to display (server-authoritative time recovers on reconnect).
-- Toast on reconnect: "Back online. You can resume scoring."
+### The outbox
+- Persistent client-side queue (IndexedDB; localStorage fallback), keyed by match id, surviving refresh and tab close.
+- Each entry is exactly the payload of a normal API call: score events `{competitor_id, delta, client_event_id, client_recorded_at}` and round commands `{command, round_number, client_command_id, occurred_at}`.
+- When online, the outbox is write-through: entries are appended and flushed immediately (normal operation is just an outbox with zero latency). When offline, entries accumulate.
+- Flush is strictly in recorded order, one at a time, through the normal endpoints. Idempotency keys make an interrupted flush restartable from the top.
 
-### Why not queue offline scores?
-- Queueing introduces conflict resolution complexity.
-- Score timing matters in martial arts (a point at 0:30 vs 0:31 may matter for video review).
-- Better to require the judge to wait for network than to silently mis-record events.
+### Timer math on replay
+Pause/resume durations are computed from deltas between the replayed commands' client timestamps — one device clock, so absolute skew cancels out. Server sanity bounds: not in the future, not before round start, monotonic within the sequence. See [Timer authority — offline exception](#offline-exception).
+
+### Conflict handling
+The only writer conflict is an admin acting while the judge is offline:
+
+- **Admin reassigns the match or removes the judge** → the flush hits 401/409. The client must NOT discard the outbox: show "This match was reassigned — your N offline events were NOT recorded" with the events viewable (competitor, delta, time) so the score can be reconstructed manually with the admin. The admin reassignment UI warns: "The assigned judge may be scoring offline; their unsynced events will be rejected."
+- **Auto-release**: `in_progress` matches are never auto-released, so a judge offline mid-round keeps their assignment indefinitely. A match left `paused` past the auto-release threshold *can* be released while the judge is offline; if another judge claims it, the original judge's flush resolves through the same 409 path above.
+- Anything else (SSE events missed while offline, standings changes) is read-only state, restored by the post-flush snapshot fetch.
 
 ### Recovery
-- On reconnect, client re-fetches full match state from server (per [reconnect behavior](#reconnect-behavior-judges)).
-- Local state is discarded.
-- Judge resumes scoring with confirmed server state.
+- On reconnect: flush outbox → re-fetch full match state → replace local state (per [reconnect behavior](#reconnect-behavior-judges)).
+- Toast: "Back online — N events synced."
 
 ## Judge kicked / removed by admin
 
@@ -339,7 +354,7 @@ Two sources of truth need to stay aligned:
 ### During the match
 - `score_events` is the authoritative source.
 - `match_rounds` totals are computed from `score_events` on read (no stored running total).
-- Cached in Redis if needed, invalidated on any score event.
+- Cached in-process if needed, invalidated on any score event.
 
 ### At submit time
 - `match_rounds` rows are *finalized*: `competitor_a_score` and `competitor_b_score` are written to the row from the live computation. This is the snapshot.
