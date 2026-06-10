@@ -1,7 +1,7 @@
 """
 Pure scoring helpers — no DB, no FastAPI, no clock.
 
-These functions encode the rules from ``docs/product/rules.md`` and exist so
+These functions encode the rules from ``docs/product.md`` and exist so
 they can be unit-tested cheaply (and BDD-tested via pytest-bdd).
 """
 

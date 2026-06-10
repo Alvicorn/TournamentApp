@@ -3,16 +3,11 @@
 ## High-level topology
 
 ```
-┌─ DNS (any provider, CNAME records) ─┐
-│                                     │
-│  tourney.com ──────► Render Static Site (React build, CDN, auto-TLS)
-│                                     │
-│  api.tourney.com ──► Render Web Service (FastAPI container, 1 instance, 1 worker)
-│                          │
-│                          ├─► Supabase Postgres (external, free tier)
-│                          │
-│                          └─► Cloudflare R2 (pg_dump backups, S3-compatible)
-└─────────────────────────────────────┘
+Render Static Site (React build, CDN, auto-TLS)
+       │
+       └─► FastAPI Web Service (1 instance, 1 worker)
+               │
+               └─► Supabase Postgres (external, free tier)
 ```
 
 **Data flow**: `React → FastAPI → SQLAlchemy → Supabase Postgres`. **Frontend never talks to Supabase directly** (and never uses the Supabase client SDK) — all business logic, auth checks, mutations, and SSE fan-out live in FastAPI: one enforcement point, one audit trail, one API surface to test.
@@ -66,8 +61,6 @@ Public:  React generates UUID → stored in localStorage → sent as X-Device-Id
 | Database | Postgres | Supabase (external) |
 | Auth (admin) | Supabase Auth | Supabase (external) |
 | Realtime fan-out | In-process asyncio pub/sub | Inside the FastAPI process |
-| Backups | `pg_dump` → Cloudflare R2 | R2 bucket (S3-compatible API) |
-| DNS | Any provider (CNAME → Render) | — |
 | TLS | Render-managed | — |
 | Uptime monitoring | UptimeRobot (free) | External, pings `/health` |
 | Web push | VAPID + Service Worker | Browser + FastAPI |

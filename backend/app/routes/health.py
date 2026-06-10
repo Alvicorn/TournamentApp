@@ -2,7 +2,6 @@ import httpx
 from fastapi import APIRouter, HTTPException, status
 
 from app.config import get_settings
-from app.redis_client import ping_redis
 
 router = APIRouter(tags=["health"])
 
@@ -26,11 +25,4 @@ def _ping_database() -> bool:
 def health_database() -> dict[str, str]:
     if not _ping_database():
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "database unreachable")
-    return {"status": "ok"}
-
-
-@router.get("/health/redis")
-def health_redis() -> dict[str, str]:
-    if not ping_redis():
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "redis unreachable")
     return {"status": "ok"}

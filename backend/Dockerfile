@@ -19,6 +19,8 @@ EXPOSE 8080
 
 # Run Alembic migrations then start uvicorn
 # CMD alembic upgrade head && \
-#     uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 2
+#     uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 1
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "2"]
+# Single worker is a hard constraint: SSE fan-out and caches are in-process.
+# See docs/architecture.md#single-instance-constraint.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]

@@ -39,7 +39,6 @@ jobs:
         run: uv run pytest tests/ -v --tb=short
         env:
           DATABASE_URL: "postgresql+psycopg://postgres:postgres@localhost:5432/tournament_test"
-          REDIS_URL: "redis://localhost:6379/0"
           JUDGE_JWT_SECRET: "test-secret"
           ADMIN_EMAIL_ALLOWLIST: "admin@test.com"
           SUPABASE_URL: "https://placeholder.supabase.co"
@@ -58,68 +57,15 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-      redis:
-        image: redis:7-alpine
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
   deploy:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/staging-')
     needs: lint-test
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
 
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Log in to ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build & push Docker image
+      # Render pulls the repo and builds the Docker image itself; CI only
+      # gates the deploy on green tests. Auto-deploy is disabled in Render.
+      - name: Trigger Render deploy
+        run: curl -fsS "$RENDER_DEPLOY_HOOK_BACKEND" > /dev/null
         env:
-          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build --platform linux/x86_64 -t $ECR_REGISTRY/tournament_app:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/tournament_app:$IMAGE_TAG
-          docker tag $ECR_REGISTRY/tournament_app:$IMAGE_TAG $ECR_REGISTRY/tournament_app:latest
-          docker push $ECR_REGISTRY/tournament_app:latest
-
-      - name: Deploy to ECS Express Mode
-        env:
-          ECS_EXPRESS_SERVICE_ARN: ${{ secrets.ECS_EXPRESS_SERVICE_ARN }}
-          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
-          IMAGE_TAG: ${{ github.sha }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
-          ADMIN_EMAIL_ALLOWLIST: ${{ secrets.ADMIN_EMAIL_ALLOWLIST }}
-          JUDGE_JWT_SECRET: ${{ secrets.JUDGE_JWT_SECRET }}
-        run: |
-          aws ecs update-express-gateway-service \
-            --service-arn $ECS_EXPRESS_SERVICE_ARN \
-            --primary-container '{
-              "image":"'"$ECR_REGISTRY/tournament_app:latest"'",
-              "containerPort":8080,
-              "environment":[
-                {"name":"SUPABASE_URL","value":"'"$SUPABASE_URL"'"},
-                {"name":"SUPABASE_KEY","value":"'"$SUPABASE_KEY"'"},
-                {"name":"REDIS_URL","value":"'"$REDIS_URL"'"},
-                {"name":"ADMIN_EMAIL_ALLOWLIST","value":"'"$ADMIN_EMAIL_ALLOWLIST"'"},
-                {"name":"JUDGE_JWT_SECRET","value":"'"$JUDGE_JWT_SECRET"'"}
-              ]
-            }' \
-            --health-check-path /health \
-            --region $AWS_REGION
+          RENDER_DEPLOY_HOOK_BACKEND: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}

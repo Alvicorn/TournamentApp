@@ -13,8 +13,6 @@ class Settings(BaseSettings):
     supabase_key: str = ""
     supabase_audience: str = "authenticated"
 
-    redis_url: str = ""
-
     judge_jwt_secret: str = ""
     judge_jwt_ttl_seconds: int = 24 * 60 * 60
 
