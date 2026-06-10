@@ -47,6 +47,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Sync env vars to Render
+        working-directory: .
+        run: |
+          jq -n \
+            --arg api_url "$VITE_API_URL" \
+            --arg vapid   "$VITE_VAPID_PUBLIC_KEY" \
+            '[
+              {"key":"VITE_API_URL","value":$api_url},
+              {"key":"VITE_VAPID_PUBLIC_KEY","value":$vapid}
+            ]' | \
+          curl -fsS -X PUT \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID_FRONTEND/env-vars" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @-
+        env:
+          VITE_API_URL:          ${{ secrets.VITE_API_URL }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+
       # Render pulls the repo, runs `pnpm build`, and publishes dist/ itself
       # (build settings + VITE_* env live on the Render static site). CI only
       # gates the deploy on green tests. Auto-deploy is disabled in Render.
