@@ -9,13 +9,13 @@ on:
     paths:
       - "frontend/**"
 
-defaults:
-  run:
-    working-directory: frontend
-
 jobs:
   lint-test:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
 
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +45,6 @@ jobs:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/staging-')
     needs: lint-test
     runs-on: ubuntu-latest
-
     steps:
       # Render pulls the repo, runs `pnpm build`, and publishes dist/ itself
       # (build settings + VITE_* env live on the Render static site). CI only
