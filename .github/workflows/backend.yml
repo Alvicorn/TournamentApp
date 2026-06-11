@@ -63,14 +63,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Create .env
-        run: |
-          echo "ADMIN_EMAIL_ALLOWLIST=${{ secrets.ADMIN_EMAIL_ALLOWLIST }}" >> .env
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
-          echo "JUDGE_JWT_SECRET=${{ secrets.JUDGE_JWT_SECRET }}" >> .env
-          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
-
       # Render pulls the repo and builds the Docker image itself; CI only
       # gates the deploy on green tests. Auto-deploy is disabled in Render.
       - name: Trigger Render deploy

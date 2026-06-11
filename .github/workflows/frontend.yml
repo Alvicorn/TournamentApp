@@ -53,5 +53,3 @@ jobs:
         run: curl -fsS "$RENDER_DEPLOY_HOOK_FRONTEND" > /dev/null
         env:
           RENDER_DEPLOY_HOOK_FRONTEND: ${{ secrets.RENDER_DEPLOY_HOOK_FRONTEND }}
-          VITE_API_URL:               ${{ secrets.VITE_API_URL }}
-          VITE_VAPID_PUBLIC_KEY:      ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
